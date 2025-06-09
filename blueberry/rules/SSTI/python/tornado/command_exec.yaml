@@ -1,0 +1,16 @@
+id: TornadoSSTI_command_execution
+
+info:
+  name: Tornado SSTI command execution 
+  description: Matches payloads which try to execute a command on the server using Tornado
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "{% import os %}{{os.system('whoami')}}"
+    - name: any
+      regex: "\\{% import os %\\}\\{\\{os.system('.*')\\}\\}"
+    - name: any
+      regex: "\\{% import os %\\}\\{\\{ os.system('.*') \\}\\}"

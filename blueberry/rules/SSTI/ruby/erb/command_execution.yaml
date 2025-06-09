@@ -1,0 +1,20 @@
+id: RubyERBSSTI_command_execution
+
+info:
+  name: Ruby ERB SSTI command execution
+  description: Matches payloads which try to execute a command on the server using Ruby ERB
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "<%=.*system\\(.*\\).*%>"
+    - name: any
+      regex: "<%=.*`.*`.*%>"
+    - name: any
+      regex: "<%=.*IO\\.popen\\(.*\\)\\.readlines\\(\\).*%>"
+    - name: any
+      regex: "<%.*require 'open3'.*%><%.*@.*,@.*,@.*,@.*=.*Open3\\.popen3\\(.*\\).*%><%=.*@.*\\.readline\\(\\).*%>"
+    - name: any
+      regex: "<%.*require 'open4'.*%><%.*@.*,@.*,@.*,@.*=.*Open4\\.popen4\\(.*\\).*%><%=.*@.*\\.readline\\(\\).*%>"

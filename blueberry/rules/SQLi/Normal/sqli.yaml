@@ -1,0 +1,18 @@
+id: SQLi-normal-1
+
+info:
+  name: SQL Injection Normal 
+  description: Looks for normal sql injection payloads
+  severity: medium
+  classification: sqli
+
+request:
+  params:
+    - name: any
+      match: "' or"
+    - name: any
+      match: '" or'
+    - name: any
+      regex: 'or.*--'
+    - name: any
+      regex: 'or.*#'

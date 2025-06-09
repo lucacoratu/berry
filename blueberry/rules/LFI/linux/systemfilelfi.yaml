@@ -1,0 +1,24 @@
+id: SystemFileLFI
+
+info:
+  name: System File LFI
+  description: Matches LFI payloads which are extracting system files
+  severity: medium
+  classification: lfi
+
+request:
+  params:
+    - name: any
+      regex: "\\/etc\\/.*"
+    - name: any
+      regex: "\\/proc\\/[0-9]+\\/?"
+    - name: any
+      regex: "\\/var\\/"
+    - name: any
+      regex: "\\/home\\/"
+    - name: any
+      regex: "\\/opt\\/"
+    - name: any
+      regex: "\\/tmp\\/"
+    - name: any
+      regex: "\\/usr\\/"

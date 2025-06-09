@@ -1,0 +1,18 @@
+id: TornadoSSTI_error
+
+info:
+  name: Tornado SSTI error 
+  description: Matches payloads which try to generate an error on the server using Tornado
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "{{foobar}}"
+    - name: any
+      match: "{{ foobar }}"
+    - name: any
+      regex: "\\{\\{.*foobar.*\\}\\}"
+    - name: any
+      match: "{% import foobar %}"

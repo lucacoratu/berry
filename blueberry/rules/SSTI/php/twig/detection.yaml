@@ -1,0 +1,18 @@
+id: PHPTwigSSTI_detection_payload
+
+info:
+  name: PHP Twig SSTI detection payload
+  description: Matches payloads which try to determine if the server using PHP Twig is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*_self.*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*_self\\.env.*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*dump\\(app\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*app\\.request\\.server\\.all\\|join\\(.*\\).*\\}\\}"

@@ -1,0 +1,16 @@
+id: Jinja2SSTI_write_remote_file
+
+info:
+  name: Jinja2 SSTI write remote file
+  description: Matches payloads which try to write to a file on the server filesystem in jinja2
+  severity: high
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{ ''\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*', 'w'\\)\\.write\\('.*'\\) \\}\\}"
+    - name: any
+      regex: "\\{\\{''\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*', 'w'\\)\\.write\\('.*'\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{''\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*','w'\\)\\.write\\('.*'\\)\\}\\}"

@@ -1,0 +1,12 @@
+id: JavaFreeMarkerSSTI_read_remote_file
+
+info:
+  name: Java Free Marker SSTI read remote file
+  description: Matches payloads which try to read a remote file from the server using Java Free Marker
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\$\\{.*product\\.getClass\\(\\)\\.getProtectionDomain\\(\\)\\.getCodeSource\\(\\)\\.getLocation\\(\\)\\.toURI\\(\\)\\.resolve\\('.*'\\)\\.toURL\\(\\)\\.openStream\\(\\)\\.readAllBytes\\(\\)\\?join\\(\".*\"\\)\\}"

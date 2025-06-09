@@ -1,0 +1,14 @@
+id: JavaPebbleSSTI_detection_payload
+
+info:
+  name: Java Pebble SSTI detection payload
+  description: Matches payloads which try to determine if the server using Java Pebble is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*\\.toUPPERCASE\\(\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('java\\.lang\\.Runtime'\\)\\.getRuntime\\(\\)\\.exec\\('.*'\\).*\\}\\}"

@@ -1,0 +1,16 @@
+id: PHPTwigSSTI_command_execution
+
+info:
+  name: PHP Twig SSTI command execution
+  description: Matches payloads which try to execute a command on the server using PHP Twig
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*_self\\.env\\.setCache\\(.*\\).*\\}\\}.*\\{\\{_self\\.env\\.loadTemplate\\(.*\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*_self\\.env\\.registerUndefinedFilterCallback\\(.*\\).*\\}\\}.*\\{\\{.*_self\\.env\\.getFilter\\(.*\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*\\[.*\\].*\\|.*filter\\(.*\\).*\\}\\}"

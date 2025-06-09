@@ -1,0 +1,22 @@
+id: Jinja2SSTI_read_remote_file
+
+info:
+  name: Jinja2 SSTI read remote file
+  description: Matches payloads which try to read a file from the server filesystem in jinja2
+  severity: high
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{ ''\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*'\\)\\.read\\(\\) \\}\\}"
+    - name: any
+      regex: "\\{\\{''\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*'\\)\\.read\\(\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{ config.items\\(\\)\\[4\\]\\[1\\]\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\(\".*\"\\)\\.read\\(\\) \\}\\}"
+    - name: any
+      regex: "\\{\\{config.items\\(\\)\\[4\\]\\[1\\]\\.__class__\\.__mro__\\[2\\]\\.__subclasses__\\(\\)\\[[0-9]+\\](\".*\").read\\(\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{ get_flashed_messages\\.__globals__\\.__builtins__\\.open\\(\".*\"\\)\\.read\\(\\) \\}\\}"
+    - name: any
+      regex: "\\{\\{get_flashed_messages\\.__globals__\\.__builtins__\\.open\\(\".*\"\\)\\.read\\(\\)\\}\\}"

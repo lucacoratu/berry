@@ -1,0 +1,18 @@
+id: JavaJinjavaSSTI_command_execution
+
+info:
+  name: Java Jinjava SSTI command execution
+  description: Matches payloads which try to execute a command on the server using Java Jinjava
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('javax\\.script\\.ScriptEngineManager'\\)\\.newInstance\\(\\)\\.getEngineByName\\('JavaScript'\\)\\.eval\\(.*"
+    # - name: any
+    #   regex: "\\{\\{'.*'\\.getClass\\(\\)\\.forName\\('javax\\.script\\.ScriptEngineManager'\\)\\.newInstance\\(\\)\\.getEngineByName\\('JavaScript'\\)\\.eval\\(\\\"var .*=new java\\.lang\\.ProcessBuilder; .*\\.command\\(\\\\\".*\\\\\"\\); .*\\.start\\(\\)\\\"\\).*\\}\\}"
+    # - name: any
+    #   regex: "\\{\\{.*'.*'\\.getClass\\(\\)\\.forName\\('javax\\.script\\.ScriptEngineManager'\\)\\.newInstance\\(\\)\\.getEngineByName\\('JavaScript'\\)\\.eval\\(\\\\\"var .*=new java\\.lang\\.ProcessBuilder; .*\\.command\\(\\\\\".*\\\\\"\\); org\\.apache\\.commons\\.io\\.IOUtils\\.toString\\(.*\\.start\\(\\)\\.getInputStream\\(\\)\\)\\\"\\)\\}\\}"
+    # - name: any
+    #   regex: "\\{\\{.*'.*'\\.getClass\\(\\)\\.forName\\('javax\\.script\\.ScriptEngineManager'\\)\\.newInstance\\(\\)\\.getEngineByName\\('JavaScript'\\).eval\\(\\\"var .*=new java\\.lang\\.ProcessBuilder; .*\\.command\\(\\\\\".*\\\\\"\\); org\\.apache\\.commons\\.io\\.IOUtils\\.toString\\(.*\\.start\\(\\)\\.getInputStream\\(\\)\\)\\\"\\)\\}\\}"

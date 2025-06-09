@@ -1,0 +1,16 @@
+id: JavaFreeMarkerSSTI_legacy_injection
+
+info:
+  name: Java Free Marker SSTI legacy injection 
+  description: Matches payloads which try to execute a legacy injection on the server using Java Free Marker
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "#{7*7}"
+    - name: any
+      match: "#{ 7*7 }"
+    - name: any
+      regex: "#\\{.*\\}"

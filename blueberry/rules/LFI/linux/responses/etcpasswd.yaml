@@ -1,0 +1,12 @@
+id: ExtractedEtcPasswd
+
+info:
+  name: Extracted /etc/passwd
+  description: Matches first line in /etc/passwd to check in response
+  severity: medium
+  classification: lfi
+
+response:
+  body:
+    - match:
+      regex: root:x:.*

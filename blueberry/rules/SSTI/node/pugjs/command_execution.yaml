@@ -1,0 +1,12 @@
+id: NodePugJSSSTI_command_execution
+
+info:
+  name: Node PugJS SSTI command execution
+  description: Matches payloads which try to execute a command on the server using Node PugJS
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "#\\{.*function\\(.*\\).*\\{.*=global\\.process\\.mainModule\\.constructor\\._load.*;.*=.*\\(\"child_process\"\\)\\.exec\\(.*\\).*\\}\\(\\).*\\}"

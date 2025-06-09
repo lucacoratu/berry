@@ -1,0 +1,12 @@
+id: PHPSmartySSTI_command_execution
+
+info:
+  name: PHP Smarty SSTI command execution
+  description: Matches payloads which try to execute a command on a server using PHP Smarty
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{system\\(.*\\)\\}"

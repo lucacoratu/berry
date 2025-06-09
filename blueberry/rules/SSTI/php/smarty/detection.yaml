@@ -1,0 +1,12 @@
+id: PHPSmartySSTI_detection_payload
+
+info:
+  name: PHP Smarty SSTI detection payload
+  description: Matches payloads which try to determine if the server using PHP Smarty is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{.*\\$smarty\\.version\\}"

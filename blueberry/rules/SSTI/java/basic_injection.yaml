@@ -1,0 +1,32 @@
+id: JavaSSTI_basic_injection
+
+info:
+  name: Java SSTI basic injection 
+  description: Matches payloads which try to execute a basic SSTI on the server using Java
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "${7*7}"
+    - name: any
+      match: "${{7*7}}"
+    - name: any
+      match: "${ 7*7 }"
+    - name: any
+      match: "{{ 7*7 }}"
+    - name: any
+      regex: "\\$\\{.*7*7.*\\}"
+    - name: any
+      regex: "\\{\\{.*7*7.*\\}\\}"
+    - name: any
+      match: "${class.getClassLoader()}"
+    - name: any
+      regex: "\\$\\{.*class.getClassLoader\\(\\).*\\}"
+    - name: any
+      match: "${class.getResource(\"\").getPath()}"
+    - name: any
+      regex: "\\$\\{.*class\\.getResource(\"\")\\.getPath\\(\\).*\\}"
+    - name: any
+      regex: "\\$\\{.*class\\.getResource(\".*\")\\.getContent\\(\\)\\}"

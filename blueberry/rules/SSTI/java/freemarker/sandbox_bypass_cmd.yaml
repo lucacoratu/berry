@@ -1,0 +1,24 @@
+id: JavaFreeMarkerSSTI_sandbox_bypass_execute_command
+
+info:
+  name: Java Free Marker SSTI bypass sandbox and execute command 
+  description: Matches payloads which try to execute a command by bypassing the sandbox on the server using Java Free Marker < 2.3.30
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: |
+        <#assign classloader=article\.class\.protectionDomain\.classLoader>
+        <#assign owc=classloader\.loadClass\("freemarker\.template\.ObjectWrapper"\)>
+        <#assign dwf=owc\.getField\("DEFAULT_WRAPPER"\)\.get\(null\)>
+        <#assign ec=classloader\.loadClass\("freemarker\.template\.utility\.Execute"\)>
+        \$\{dwf\.newInstance\(ec,null\)\(".*"\)}
+    - name: any
+      regex: |
+        <#assign .*=article\.class\.protectionDomain\.classLoader>
+        <#assign .*=.*\.loadClass\("freemarker\.template\.ObjectWrapper"\)>
+        <#assign .*=.*\.getField\("DEFAULT_WRAPPER"\)\.get\(null\)>
+        <#assign .*=.*\.loadClass\("freemarker\.template\.utility\.Execute"\)>
+        \$\{.*\.newInstance\(.*,null\)\(".*"\)}

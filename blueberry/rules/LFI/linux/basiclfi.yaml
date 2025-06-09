@@ -1,0 +1,16 @@
+id: BasicLFI
+
+info:
+  name: Basic LFI
+  description: Matches basic LFI payloads
+  severity: medium
+  classification: lfi
+
+request:
+  params:
+    - name: any
+      match: ../
+    - name: any
+      match: "%2E%2E%2F"
+    - name: any
+      match: "%252E%252E%252F"

@@ -1,0 +1,12 @@
+id: JavaThymeleafSSTI_expression_preprocessing
+
+info:
+  name: Java Thymeleaf SSTI expression preprocessing 
+  description: Matches payloads which tests for expression preprocessing in Java using Thymeleaf
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "#\\{.*selection\\.__\\$\\{sel\\.code\\}__.*\\}"

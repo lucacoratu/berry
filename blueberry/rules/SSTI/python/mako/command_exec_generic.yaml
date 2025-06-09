@@ -1,0 +1,17 @@
+id: MakoSSTI_command_execution_generic
+
+info:
+  name: Mako SSTI command execution 
+  description: Matches payloads which try to execute a command on the server using Mako
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: |
+        <%
+        import os
+        .*=os\.popen('.*')\.read\(\)
+        %>
+        \$\{.*\}

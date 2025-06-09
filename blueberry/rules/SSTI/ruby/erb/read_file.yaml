@@ -1,0 +1,14 @@
+id: RubyERBSSTI_file_read
+
+info:
+  name: Ruby ERB SSTI file read
+  description: Matches payloads which try to read a file from the server using Ruby ERB
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "<%=.*File\\.open\\(.*\\)\\.read.*%>"
+    - name: any
+      regex: "<%=.*Dir\\.entries\\(.*\\).*%>"

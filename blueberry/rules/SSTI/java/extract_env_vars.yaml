@@ -1,0 +1,14 @@
+id: JavaSSTI_extract_env_vars
+
+info:
+  name: Java SSTI extract environment variables
+  description: Matches payloads which try to extract environment vars from the server using Java
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "${T(java.lang.System).getenv()}"
+    - name: any
+      regex: "\\$\\{.*T\\(java\\.lang\\.System\\)\\.getenv\\(\\)\\}"

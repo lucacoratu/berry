@@ -1,0 +1,16 @@
+id: PHPSourceCodeLFI
+
+info:
+  name: PHP Source Code LFI
+  description: Matches LFI payloads which try to extract php source code
+  severity: medium
+  classification: lfi
+
+request:
+  params:
+    - name: any
+      regex: "(\\.\\.\\/){1,}[A-Za-z0-9_-]+\\.php"
+    - name: any
+      regex: "(\\.\\/){1,}[A-Za-z0-9_-]+\\.php"
+    - name: any
+      regex: "\\/var\\/www\\/([A-Za-z0-9_-]+\\/){1,}[A-Za-z0-9_-]+\\.php"

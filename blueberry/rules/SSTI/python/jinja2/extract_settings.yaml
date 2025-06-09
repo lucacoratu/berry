@@ -1,0 +1,12 @@
+id: Jinja2SSTI_extract_settings
+
+info:
+  name: Jinja2 SSTI extract settings object 
+  description: Matches payloads which try to extract the settings object from jinja2
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "{{settings}}"

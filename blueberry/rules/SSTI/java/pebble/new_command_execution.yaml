@@ -1,0 +1,38 @@
+id: JavaPebbleSSTI_new_command_execution
+
+info:
+  name: Java Pebble SSTI new command execution
+  description: Matches payloads which try to execute a command on the server using Java Pebble > 3.0.9
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: |
+        \{% set cmd = '.*' %\}
+        \{% set bytes = \(1\)\.TYPE
+            \.forName\('java\.lang\.Runtime'\)
+            \.methods\[6\]
+            \.invoke\(null,null\)
+            \.exec\(cmd\)
+            \.inputStream
+            \.readAllBytes\(\) %\}
+        \{\{ \(1\)\.TYPE
+            \.forName\('java\.lang\.String'\)
+            \.constructors\[0\]
+            \.newInstance\(\(\[bytes\]\)\.toArray\(\)\) \}\}
+    - name: any
+      regex: |
+        \{% set .* = '.*' %\}
+        \{% set .* = \(.*\)\.TYPE
+            \.forName\('java\.lang\.Runtime'\)
+            \.methods\[.*\]
+            \.invoke\(null,null\)
+            \.exec\(.*\)
+            \.inputStream
+            \.readAllBytes\(\) %\}
+        \{\{.*\(.*\)\.TYPE
+            \.forName\('java\.lang\.String'\)
+            \.constructors\[.*\]
+            \.newInstance\(\(\[bytes\]\)\.toArray\(\)\).*\}\}

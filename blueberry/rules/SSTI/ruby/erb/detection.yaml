@@ -1,0 +1,16 @@
+id: RubyERBSSTI_detection_payload
+
+info:
+  name: Ruby ERB SSTI detection payload
+  description: Matches payloads which try to determine if the server using PHP Twig is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*\\}\\}"
+    - name: any
+      regex: "\\$\\{.*\\}"
+    - name: any
+      regex: "<%=.*%>"

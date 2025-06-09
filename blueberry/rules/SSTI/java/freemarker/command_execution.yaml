@@ -1,0 +1,16 @@
+id: JavaFreeMarkerSSTI_command_execution
+
+info:
+  name: Java Free Marker SSTI command execution 
+  description: Matches payloads which try to execute a command on the server using Java Free Marker
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "<#assign ex = \"freemarker\\.template\\.utility\\.Execute\"\\?new\\(\\)>\\$\\{.*ex(\".*\").*\\}"
+    - name: any
+      regex: "\\[#assign ex = 'freemarker\\.template\\.utility\\.Execute'\\?new\\(\\)\\]\\$\\{.*ex\\('.*'\\)\\}"
+    - name: any
+      regex: "\\$\\{.*\"freemarker\\.template\\.utility\\.Execute\"\\?new\\(\\)\\(\".*\"\\)\\}"

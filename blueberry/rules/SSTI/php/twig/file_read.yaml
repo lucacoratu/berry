@@ -1,0 +1,12 @@
+id: PHPTwigSSTI_file_read
+
+info:
+  name: PHP Twig SSTI file read
+  description: Matches payloads which try to read a remote file from the server using PHP Twig
+  severity: high
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\"\\{\\{.*'.*'\\|file_excerpt\\(.*\\).*\\}\\}\"@"

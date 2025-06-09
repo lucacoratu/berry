@@ -1,0 +1,14 @@
+id: JavaThymeleafSSTI_spring_view_manipulation
+
+info:
+  name: Java Thymeleaf SSTI spring view manipulation 
+  description: Matches payloads which tries to execute a command using spring view manipulation in Java using Thymeleaf
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "__\\$\\{.*new java\\.util\\.Scanner\\(T\\(java\\.lang\\.Runtime\\)\\.getRuntime\\(\\)\\.exec\\(\".*\"\\)\\.getInputStream\\(\\)\\)\\.next\\(\\).*\\}__::\\.x"
+    - name: any
+      regex: "__\\$\\{.*T\\(java\\.lang\\.Runtime\\)\\.getRuntime\\(\\)\\.exec\\(\".*\"\\).*\\}__::\\.x"

@@ -1,0 +1,20 @@
+id: JavaHubspotSSTI_detection_payload
+
+info:
+  name: Java Hubspot SSTI detection payload
+  description: Matches payloads which try to determine if the server using Java Hubspot is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*request\\.isDebug\\(\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('sun\\.misc\\.Launcher'\\)\\.newInstance\\(\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('com\\.hubspot\\.jinjava\\.JinjavaConfig'\\)\\.newInstance\\(\\).*\\}\\}"
+    - name: any
+      regex: "\\{%.*set .*=.*\\.getClass\\(\\)\\.forName\\('com\\.hubspot\\.jinjava\\.Jinjava'\\)\\.newInstance\\(\\)\\.newInterpreter\\(\\).*%\\}\\{\\{.*\\.render\\(.*\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('javax\\.script\\.ScriptEngineManager'\\)\\.newInstance\\(\\)\\.getEngineByName\\('JavaScript'\\).eval\\(\\\"new java\\.lang\\.String\\(.*\\)\\\"\\).*\\}\\}"

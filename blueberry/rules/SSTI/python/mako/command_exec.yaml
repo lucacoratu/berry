@@ -1,0 +1,17 @@
+id: MakoSSTI_command_execution
+
+info:
+  name: Mako SSTI command execution 
+  description: Matches payloads which try to execute a command on the server using Mako
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: |
+        <%
+        import os
+        x=os.popen('id').read()
+        %>
+        ${x}

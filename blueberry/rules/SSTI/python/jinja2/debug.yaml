@@ -1,0 +1,12 @@
+id: Jinja2SSTI_debug
+
+info:
+  name: Jinja2 SSTI debug statement 
+  description: Matches payloads which try to use the debug statement from jinja2
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "{% debug %}"

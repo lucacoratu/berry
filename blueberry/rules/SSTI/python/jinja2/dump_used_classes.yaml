@@ -1,0 +1,22 @@
+id: Jinja2SSTI_dump_used_classes
+
+info:
+  name: Jinja2 SSTI dump used classes 
+  description: Matches payloads which try to dump used classes in jinja2
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "{{ [].class.base.subclasses() }}"
+    - name: any
+      match: "{{[].class.base.subclasses()}}"
+    - name: any
+      match: "{{''.class.mro()[1].subclasses()}}"
+    - name: any
+      match: "{{ ''.class.mro()[1].subclasses() }}"
+    - name: any
+      match: "{{ ''.__class__.__mro__[2].__subclasses__() }}"
+    - name: any
+      match: "{{''.__class__.__mro__[2].__subclasses__()}}"

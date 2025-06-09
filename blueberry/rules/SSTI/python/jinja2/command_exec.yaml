@@ -1,0 +1,34 @@
+id: Jinja2SSTI_command_execution
+
+info:
+  name: Jinja2 SSTI command execution
+  description: Matches payloads which try execute commands on the server in jinja2
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{''\\.__class__\\.mro\\(\\)\\[1\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*',shell=True,stdout=-1\\)\\.communicate\\(\\)\\[0\\].strip\\(\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{ ''\\.__class__\\.mro\\(\\)\\[1\\]\\.__subclasses__\\(\\)\\[[0-9]+\\]\\('.*',shell=True,stdout=-1\\)\\.communicate\\(\\)\\[0\\].strip\\(\\) \\}\\}"
+    - name: any
+      regex: "\\{\\{config\\.__class__\\.__init__\\.__globals__\\['os'\\].popen\\('.*'\\)\\.read\\(\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{ config\\.__class__\\.__init__\\.__globals__\\['os'\\].popen\\('.*'\\)\\.read\\(\\) \\}\\}"
+    - name: any
+      regex: "\\{\\{request|attr\\('application'\\)|attr\\('\x5f\x5fglobals\x5f\x5f'\\)|attr\\('\x5f\x5fgetitem\x5f\x5f'\\)\\('\x5f\x5fbuiltins\x5f\x5f'\\)|attr\\('\x5f\x5fgetitem\x5f\x5f'\\)\\('\x5f\x5fimport\x5f\x5f'\\)\\('os'\\)|attr\\('popen'\\)\\('.*'\\)|attr\\('read'\\)\\(\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{ request|attr\\('application'\\)|attr\\('\x5f\x5fglobals\x5f\x5f'\\)|attr\\('\x5f\x5fgetitem\x5f\x5f'\\)\\('\x5f\x5fbuiltins\x5f\x5f'\\)|attr\\('\x5f\x5fgetitem\x5f\x5f'\\)\\('\x5f\x5fimport\x5f\x5f'\\)\\('os'\\)|attr\\('popen'\\)\\('.*'\\)|attr\\('read'\\)\\(\\) \\}\\}"
+    - name: any
+      regex: "\\{% with a = request\\[\"application\"\\]\\[\"\x5f\x5fglobals\x5f\x5f\"\\]\\[\"\x5f\x5fbuiltins\x5f\x5f\"\\]\\[\"\x5f\x5fimport\x5f\x5f\"]\\(\"os\"\\)\\[\"popen\"\\]\\(\".*\"\\)\\[\"read\"\\]\\(\\) %\\} a \\{% endwith %\\}"
+    - name: any
+      regex: "\\{% with a = request\\['application'\\]\\['\x5f\x5fglobals\x5f\x5f'\\]\\['\x5f\x5fbuiltins\x5f\x5f'\\]\\['\x5f\x5fimport\x5f\x5f']\\('os'\\)\\['popen'\\]\\('.*'\\)\\['read'\\]\\(\\) %\\} a \\{% endwith %\\}"
+    - name: any
+      regex: "\\{\\{.*request|attr\\(\\[request\\.args\\.usc\\*2,request\\.args\\.class,request\\.args\\.usc\\*2]|join\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{request|attr\\(\\[\"_\"\\*2,\"class\",\"_\"\\*2\\]|join\\).*\\}\\}"
+    - name: any
+      regex: "\\{\\{request|attr\\(\\[\"__\",\"class\",\"__\"\\]|join\\).*\\}\\}"
+    - name: any
+      regex: "\\{% for x in \\(\\)\\.__class__\\.__base__\\.__subclasses__\\(\\) %\\}\\{% if \"warning\" in x\\.__name__ %\\}\\{\\{x\\(\\)\\._module\\.__builtins__\\['__import__'\\]\\('os'\\)\\.popen\\(\"python3 -c 'import socket,subprocess,os;s=socket\\.socket\\(socket\\.AF_INET,socket\\.SOCK_STREAM\\);s\\.connect\\(\\(\\\".*\\\",4444\\)\\);os\\.dup2\\(s\\.fileno\\(\\),0\\); os\\.dup2\\(s\\.fileno\\(\\),1\\); os\\.dup2\\(s\\.fileno\\(\\),2\\);p=subprocess.call\\(\\[\\\".*\\\"\\]\\);'\"\\)\\.read\\(\\).zfill\\(.*\\)\\}\\}\\{%endif%\\}\\{% endfor %\\}"

@@ -1,0 +1,12 @@
+id: PHPSmartySSTI_write_file
+
+info:
+  name: PHP Smarty SSTI write file
+  description: Matches payloads which try to determine if the server using PHP Smarty is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{.*Smarty_Internal_Write_File::writeFile\\(\\$SCRIPT_NAME,\".*\",.*self::clearConfig\\(\\).*\\)\\}"

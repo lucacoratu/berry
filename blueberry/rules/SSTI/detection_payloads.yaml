@@ -1,0 +1,22 @@
+id: SSTIDetectionPayloads
+
+info:
+  name: SSTI Detection Payloads
+  description: The rule matches the payloads used by attackers when identifying if the server is vulnerable to SSTI
+  severity: low
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "${7*7}"
+    - name: any
+      match: "{{7*7}}"
+    - name: any
+      match: "{{7*'7'}}"
+    - name: any
+      match: "a{*comment*}b"
+    - name: any
+      match: "a{*comment*}b"
+    - name: any
+      match: "${\"z\".join(\"ab\")}"

@@ -1,0 +1,18 @@
+id: JavaJinjavaSSTI_detection_payload
+
+info:
+  name: Java Jinjava SSTI detection payload
+  description: Matches payloads which try to determine if the server using Java Jinjava is vulnerable to SSTI
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{'a'\\.toUpperCase\\(\\)\\}\\}"
+    - name: any
+      regex: "\\{\\{ request \\}\\}"
+    - name: any
+      regex: "\\{\\{.*request.*\\}\\}"
+    - name: any
+      regex: "\\{\\{.*'.*'\\.toUpperCase\\(\\).*\\}\\}"

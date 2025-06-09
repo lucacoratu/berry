@@ -1,0 +1,12 @@
+id: JavaHubspotSSTI_command_execution
+
+info:
+  name: Java Hubspot SSTI command execution
+  description: Matches payloads which try to execute a command on the server using Java Hubspot
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('javax\\.script\\.ScriptEngineManager'\\)\\.newInstance\\(\\)\\.getEngineByName\\('JavaScript'\\)\\.eval\\(.*"

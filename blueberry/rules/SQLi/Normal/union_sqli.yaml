@@ -1,0 +1,14 @@
+id: SQLi-union-1
+
+info:
+  name: SQL Injection Union Based
+  description: Looks for union based sql injection payloads
+  severity: medium
+  classification: sqli
+
+request:
+  params:
+    - name: any
+      match: "UNION SELECT"
+    - name: any
+      match: "UNION ALL SELECT"

@@ -1,0 +1,14 @@
+id: XXE_generic_payloads
+
+info:
+  name: XXE generic payloads
+  description: The rule matches the payloads used by attackers to exploit XXE vulnerabilities
+  severity: medium
+  classification: xxe
+
+request:
+  params:
+    - name: any
+      regex: "<\\!DOCTYPE.*\\[.*<\\!ENTITY .* SYSTEM .* >.*\\]>"
+  body:
+    - regex: "<\\!DOCTYPE.*\\[.*<\\!ENTITY .* SYSTEM .* >.*\\]>"

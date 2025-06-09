@@ -1,0 +1,30 @@
+id: JavaVelocitySSTI_command_execution
+
+info:
+  name: Java Velocity SSTI command execution 
+  description: Matches payloads which try to execute a command on the server using Java Velocity
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: |
+        #set\(\$str=\$class\.inspect\("java\.lang\.String"\)\.type\)
+        #set\(\$chr=\$class\.inspect\("java\.lang\.Character"\)\.type\)
+        #set\(\$ex=\$class\.inspect\("java\.lang\.Runtime"\)\.type\.getRuntime\(\)\.exec\(".*"\)\)
+        \$ex\.waitFor\(\)
+        #set\(\$out=\$ex\.getInputStream\(\)\)
+        #foreach\(\$i in \[1\.\.\$out\.available\(\)\]\)
+        \$str\.valueOf\(\$chr\.toChars\(\$out\.read\(\)\)\)
+        #end
+    - name: any
+      regex: |
+        #set\(\$.*=\$class\.inspect\("java\.lang\.String"\)\.type\)
+        #set\(\$.*=\$class\.inspect\("java\.lang\.Character"\)\.type\)
+        #set\(\$.*=\$class\.inspect\("java\.lang\.Runtime"\)\.type\.getRuntime\(\)\.exec\(".*"\)\)
+        \$.*\.waitFor\(\)
+        #set\(\$.*=\$ex\.getInputStream\(\)\)
+        #foreach\(\$i in \[1\.\.\$.*\.available\(\)\]\)
+        \$.*\.valueOf\(\$.*\.toChars\(\$.*\.read\(\)\)\)
+        #end

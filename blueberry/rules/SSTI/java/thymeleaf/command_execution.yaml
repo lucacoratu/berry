@@ -1,0 +1,14 @@
+id: JavaThymeleafSSTI_command_execution
+
+info:
+  name: Java Thymeleaf SSTI command execution 
+  description: Matches payloads which try to execute a command on the server using Java Thymeleaf
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\$\\{.*T\\(java\\.lang\\.Runtime\\)\\.getRuntime\\(\\)\\.exec\\('.*'\\).*\\}"
+    - name: any
+      regex: "\\$\\{.*#rt = @java\\.lang\\.Runtime@getRuntime\\(\\),#rt\\.exec\\(\".*\"\\)\\}"

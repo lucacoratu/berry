@@ -1,0 +1,12 @@
+id: JavaPebbleSSTI_old_command_execution
+
+info:
+  name: Java Pebble SSTI old command execution
+  description: Matches payloads which try to execute a command on the server using Java Pebble < 3.0.9
+  severity: critical
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      regex: "\\{\\{.*\\.getClass\\(\\)\\.forName\\('java\\.lang\\.Runtime'\\)\\.getRuntime\\(\\)\\.exec\\('.*'\\).*\\}\\}"

@@ -1,0 +1,14 @@
+id: Jinja2SSTI_extract_config
+
+info:
+  name: Jinja2 SSTI extract config object 
+  description: Matches payloads which try to extract the configuration object from jinja2
+  severity: medium
+  classification: ssti
+
+request:
+  params:
+    - name: any
+      match: "{{config}}"
+    - name: any
+      match: "{{config.items()}}"
