@@ -21,7 +21,7 @@ var SupportedEncodings = []string{"base64", "url"}
 // @param logger - the logger to be used to display the errors
 // If the directory cannot be opened to read all the files in it then an error is returned
 func LoadRulesFromDirectory(configuration config.Configuration, logger logging.ILogger) ([]Rule, error) {
-	rulesDirectory := configuration.RulesDirectory
+	rulesDirectory := configuration.RuleConfig.RulesDirectory
 
 	//Check if the directory exists
 	_, err := os.Stat(rulesDirectory)
@@ -33,8 +33,8 @@ func LoadRulesFromDirectory(configuration config.Configuration, logger logging.I
 	err = filepath.WalkDir(rulesDirectory, func(path string, d fs.DirEntry, err error) error {
 		//Check if the directory is not in the list of ignored directories from the config
 		if d.IsDir() {
-			if configuration.IgnoreRulesDirectories != nil {
-				for _, ignoreDir := range configuration.IgnoreRulesDirectories {
+			if configuration.RuleConfig.IgnoreRulesDirectories != nil {
+				for _, ignoreDir := range configuration.RuleConfig.IgnoreRulesDirectories {
 					if ignoreDir == d.Name() {
 						logger.Info("Skipped rule directory", d.Name(), ", present in list of ignored directories")
 						//Skip the directory
@@ -46,7 +46,7 @@ func LoadRulesFromDirectory(configuration config.Configuration, logger logging.I
 
 		//If the directory entry is not a directory
 		if !d.IsDir() {
-			//If the file ends doesn't .yaml
+			//If the file doesn't end in .yaml
 			if !strings.HasSuffix(d.Name(), ".yaml") {
 				logger.Warning("Skipping rule file", path, ", it is not a yaml file, check the file extension")
 				return nil

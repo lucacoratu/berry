@@ -1,0 +1,15 @@
+services:
+  - lprotocol: http
+    laddress: 0.0.0.0
+    lport: '8080'
+    rprotocol: http
+    raddress: 127.0.0.1
+    rport: '8082'
+rules:
+  rules_directory: "./rules"
+  default_action: allow
+logging:
+  logger_type: console
+cranberry_url: http://127.0.0.1:9000
+uuid: ''
+operation_mode: waf

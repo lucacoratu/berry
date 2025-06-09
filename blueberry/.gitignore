@@ -26,11 +26,10 @@ tmp/
 .env
 
 # config file
-config.yml
+config.yaml
 
 # Project build
 main
-blueberry
 *templ.go
 
 # OS X generated file

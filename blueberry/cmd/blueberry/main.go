@@ -3,10 +3,10 @@ package main
 import "blueberry/internal/server"
 
 func main() {
-	proxyServer := server.AgentServer{}
-	err := proxyServer.Init()
+	bServer := server.BlueberryServer{}
+	err := bServer.Init()
 	if err != nil {
 		return
 	}
-	proxyServer.Run()
+	bServer.Run()
 }

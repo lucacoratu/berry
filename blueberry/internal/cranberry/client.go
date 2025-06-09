@@ -32,6 +32,7 @@ func (api *APIHandler) RegisterAgent(apiBaseUrl string, agentInfo data.AgentInfo
 		return "", errors.New("could not transform the machine info into JSON")
 	}
 	//Send the data to the api
+	//TODO...Add custom user agent for validation on the server
 	resp, err := http.Post(apiBaseUrl+"/registeragent", "application/json", bytes.NewBuffer(bodyData))
 	//Check if an error occured when sending the request to the collector
 	if err != nil {
@@ -56,7 +57,9 @@ func (api *APIHandler) SendLog(apiBaseUrl string, logData data.LogData) (bool, e
 	if err != nil {
 		return false, errors.New("could not transform the log data into JSON")
 	}
+
 	//Send the data to the api
+	//TODO...Add custom user agent for validation on the server
 	resp, err := http.Post(apiBaseUrl+"/addlog", "application/json", bytes.NewBuffer(bodyData))
 	//Check if an error occured when sending the request to the collector
 	if err != nil {

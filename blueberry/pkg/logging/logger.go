@@ -16,6 +16,13 @@ type Logger struct {
 	DebugPrefix    string
 }
 
+var (
+	GreenColor  string = "\x1b[1;32m"
+	RedColor    string = "\x1b[1;31m"
+	YellowColor string = "\x1b[1;33m"
+	ResetColor  string = "\x1b[0m"
+)
+
 func NewLogger(infoPrefix string, warningPrefix string, errorPrefix string, fatalPrefix string) *Logger {
 	//Create a new logger that will output to stdout
 	return &Logger{InternalLogger: log.New(os.Stdout, "[BLUEBERRY] - ", log.Ldate|log.Ltime), InfoPrefix: infoPrefix, WarningPrefix: warningPrefix, ErrorPrefix: errorPrefix, FatalPrefix: fatalPrefix, DebugEnabled: false, DebugPrefix: ""}
@@ -26,11 +33,25 @@ func NewDebugLogger(infoPrefix string, warningPrefix string, errorPrefix string,
 }
 
 func NewDefaultLogger() *Logger {
-	return &Logger{InternalLogger: log.New(os.Stdout, "[BLUEBERRY] - ", log.Ldate|log.Ltime), InfoPrefix: "[INFO] -", WarningPrefix: "[WARNING] -", ErrorPrefix: "[ERROR] -", FatalPrefix: "[FATAL] -", DebugEnabled: false, DebugPrefix: ""}
+	return &Logger{
+		InternalLogger: log.New(os.Stdout, "[BLUEBERRY] - ", log.Ldate|log.Ltime),
+		InfoPrefix:     GreenColor + "[INFO]" + ResetColor + " -",
+		WarningPrefix:  YellowColor + "[WARNING]" + ResetColor + " -",
+		ErrorPrefix:    RedColor + "[ERROR]" + ResetColor + " -",
+		FatalPrefix:    RedColor + "[FATAL]" + ResetColor + " -",
+		DebugEnabled:   false,
+		DebugPrefix:    ""}
 }
 
 func NewDefaultDebugLogger() *Logger {
-	return &Logger{InternalLogger: log.New(os.Stdout, "[BLUEBERRY] - ", log.Ldate|log.Ltime), InfoPrefix: "[INFO] -", WarningPrefix: "[WARNING] -", ErrorPrefix: "[ERROR] -", FatalPrefix: "[FATAL] -", DebugEnabled: true, DebugPrefix: "[DEBUG] -"}
+	return &Logger{
+		InternalLogger: log.New(os.Stdout, "[BLUEBERRY] - ", log.Ldate|log.Ltime),
+		InfoPrefix:     GreenColor + "[INFO]" + ResetColor + " -",
+		WarningPrefix:  YellowColor + "[WARNING]" + ResetColor + " -",
+		ErrorPrefix:    RedColor + "[ERROR]" + ResetColor + "-",
+		FatalPrefix:    RedColor + "[FATAL]" + ResetColor + "-",
+		DebugEnabled:   true,
+		DebugPrefix:    "[DEBUG] -"}
 }
 
 func (logger *Logger) Info(args ...any) {

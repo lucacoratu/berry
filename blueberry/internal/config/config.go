@@ -1,99 +1,98 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
 	"io"
-	"os"
-	"strings"
 
-	"blueberry/internal/utils"
-
-	"github.com/go-playground/validator/v10"
+	"gopkg.in/yaml.v2"
 )
 
-type AdaptiveTemplate struct {
-	URL          string //The endpoint where the template should be used when the LLM responds
-	TemplatePath string //The path to the template file
+// Structure that holds the information about the backend services the proxy should use
+// @fields
+// Name - The name of the service
+// ListeningProtocol - The protocol the agent uses to communicate to users
+// ListeningAddress - Interface address to listen on (127.0.0.1, 0.0.0.0, etc.)
+// ListeningPort - Port to listen on
+// RemoteURL - The URL of the remote server the requests should be sent
+// RemoteProtocol - The protocol used for communication by the remote server
+// RemoteAddress - The IPv4 address of the remote service
+// RemotePort - The port the remote service is listening on
+type BackendServices struct {
+	Name string `yaml:"name" mapstructure:"name"`
+	//Listen options
+	ListeningProtocol string `yaml:"lprotocol" mapstructure:"lprotocol"`
+	ListeningAddress  string `yaml:"laddress" mapstructure:"laddress"`
+	ListeningPort     string `yaml:"lport" mapstructure:"lport"`
+
+	//Remote service options
+	RemoteURL      string `yaml:"rurl" mapstructure:"rurl"`
+	RemoteProtocol string `yaml:"rprotocol" mapstructure:"rprotocol"`
+	RemoteAddress  string `yaml:"raddress" mapstructure:"raddress"`
+	RemotePort     string `yaml:"rport" mapstructure:"rport"`
+}
+
+// Structure that holds the rules related options
+// @fields
+// RulesDirectory - The directory where rules can be found
+// IgnoreRulesDirectories - The directories with rules that should be ignored when loading the rules
+// DefaultAction - The default actions for rules which do not specify
+type RuleOptions struct {
+	RulesDirectory         string   `yaml:"rules_directory" mapstructure:"rules_directory"`
+	IgnoreRulesDirectories []string `yaml:"ignore_rules_directories" mapstructure:"ignore_rules_directories"`
+	DefaultAction          string   `yaml:"default_action" mapstructure:"default_action"`
+	ForbiddenHTTPMessage   string   `yaml:"forbidden_http_message" mapstructure:"forbidden_http_message"`
+	ForbiddenHTTPPath      string   `yaml:"forbidden_http_path" mapstructure:"forbidden_http_path"`
+	ForbiddenTCPMessage    string   `yaml:"forbidden_tcp_message" mapstructure:"forbidden_tcp_message"`
+}
+
+// Structure that holds the ssl options
+// @fields
+// TLSCertificateFilepath - The path to the certificate file
+// TLSKeyFilepath - The path to the key associated with TLS Certificate
+type SSLOptions struct {
+	TLSCertificateFilepath string `yaml:"certificate" mapstructure:"certificate"`
+	TLSKeyFilepath         string `yaml:"key" mapstructure:"key"`
+}
+
+// Structure that holds the logging options
+// @fields
+// LoggerType - The logger variant that should be used
+// LogFilepath - The file path where the logs will be written if the file LoggerType is chosen
+// Log URL - The url the log should be sent to if the remote logger is chosen
+// DebugEnabled - If the debug messages should be shown by the logger
+type LoggingOptions struct {
+	LoggerType   string `yaml:"logger_type" mapstructure:"logger_type"`
+	LogFilepath  string `yaml:"log_filepath" mapstructure:"log_filepath"`
+	LogURL       string `yaml:"log_url" mapstructure:"log_url"`
+	DebugEnabled bool   `yaml:"debug" mapstructure:"debug"`
 }
 
 // Structure that will hold the configuration parameters of the proxy
+// @fields
+// Services - The services the proxy will interact with
+// SSLConfig - The configuration of the ssl (if needed)
+// RuleConfig - The rules options
+// LogConfig - The logging options
+// CranberryURL - The URL of the cranberry instance
+// UUID - The UUID of the instance, received after registration to the API
+// OperationMode - The mode the server will operate on (can be testing, waf) - case insensitive
 type Configuration struct {
-	ListeningProtocol      string             `json:"protocol" validate:"required,oneof_insensitive=http https"`                //The protocol the agent uses to communicate to users
-	ListeningAddress       string             `json:"address" validate:"required,ipv4"`                                         //Address to listen on (127.0.0.1, 0.0.0.0, etc.)
-	ListeningPort          string             `json:"port" validate:"required,number,gt=0,lt=65536"`                            //Port to listen on
-	TLSCertificateFilepath string             `json:"tlsCertificateFilepath"`                                                   //The path to the certificate file
-	TLSKeyFilepath         string             `json:"tlsKeyFilepath"`                                                           //The path to the key associated with TLS Certificate
-	ForbiddenPagePath      string             `json:"forbiddenPagePath" validate:"required"`                                    //Forbidden page location
-	BlacklistUserAgentPath string             `json:"blacklistUserAgentPath" validate:"required"`                               //Path to the wordlist of banned User-Agents
-	ForwardServerProtocol  string             `json:"forwardServerProtocol" validate:"required"`                                //Protocol used when forwarding request to webserver
-	ForwardServerAddress   string             `json:"forwardServerAddress" validate:"required"`                                 //Address of the webserver to send the request to
-	ForwardServerPort      string             `json:"forwardServerPort" validate:"required,number,gt=0,lt=65536"`               //Port to forward the request to
-	APIProtocol            string             `json:"apiProtocol"`                                                              //API protocol
-	APIIpAddress           string             `json:"apiIpAddress"`                                                             //API ip address
-	APIPort                string             `json:"apiPort"`                                                                  //API port
-	UUID                   string             `json:"uuid"`                                                                     //The UUID of the agent, received after registration to the API
-	RulesDirectory         string             `json:"rulesDirectory"`                                                           //The directory where rules can be found
-	OperationMode          string             `json:"operationMode" validate:"required,oneof_insensitive=testing waf adaptive"` //The mode the agent will operate on (can be testing, waf, adaptive) - case insensitive
-	IgnoreRulesDirectories []string           `json:"ignoreRulesDirectories"`                                                   //The directories with rules that should be ignored when loading the rules
-	UseAIClassifier        bool               `json:"useAIClassifier"`                                                          //If the agent should use the AI classifier
-	Classifier             string             `json:"classifier" validate:"required,oneof_insensitive=svc knn random-forest"`   //The classifier model to be used
-	LLMAPIURL              string             `json:"llmAPIURL"`                                                                //The URL for the LLM API
-	CreateDataset          bool               `json:"createDataset"`                                                            //If the agent should save the requests features in a dataset
-	DatasetPath            string             `json:"datasetPath" validate:"required"`                                          //The path where the dataset will be saved
-	AdaptiveTemplates      []AdaptiveTemplate `json:"adaptiveTemplates"`                                                        //The list of templates used when getting response from the LLM
+	Services      []*BackendServices `yaml:"services" mapstructure:"services"`
+	SSLConfig     *SSLOptions        `yaml:"ssl" mapstructure:"ssl"`
+	RuleConfig    *RuleOptions       `yaml:"rules" mapstructure:"rules"`
+	LogConfig     *LoggingOptions    `yaml:"logging" mapstructure:"logging"`
+	CranberryURL  string             `yaml:"cranberry_url" mapstructure:"cranberry_url"`
+	UUID          string             `yaml:"uuid" mapstructure:"uuid"`
+	OperationMode string             `yaml:"operation_mode" mapstructure:"operation_mode"`
 }
 
-// Validate function for one of (case insensitive)
-// @param fl - the field level
-// Returns true if the field value matches one of the specified values in the struct tag else false
-func validateOneOfInsensitive(fl validator.FieldLevel) bool {
-	fieldValue := fl.Field().String()
-	allowedValues := strings.Split(fl.Param(), " ")
-
-	for _, allowedValue := range allowedValues {
-		if strings.EqualFold(fieldValue, allowedValue) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// Load the configuration from a file
-func (conf *Configuration) LoadConfigurationFromFile(filePath string) error {
-	//Check if the file exists
-	found := utils.CheckFileExists(filePath)
-	if !found {
-		return errors.New("configuration file cannot be found")
-	}
-	//Open the file and load the data into the configuration structure
-	file, err := os.Open(filePath)
-	//Check if an error occured when opening the file
-	if err != nil {
-		return err
-	}
-	err = conf.FromJSON(file)
-	//Check if an error occured when loading the json from file
-	if err != nil {
-		return err
-	}
-	//Initialize the validator of the json data
-	validate := validator.New(validator.WithRequiredStructEnabled())
-	validate.RegisterValidation("oneof_insensitive", validateOneOfInsensitive)
-	//Validate the fields of the struct
-	err = validate.Struct(conf)
-	return err
-}
-
-// Convert from json into the configuration structure
-func (conf *Configuration) FromJSON(r io.Reader) error {
-	d := json.NewDecoder(r)
+// Function to read the yaml config into the struct
+func (conf *Configuration) FromYAML(r io.Reader) error {
+	d := yaml.NewDecoder(r)
 	return d.Decode(conf)
 }
 
-// Convert to json the configuration structure
-func (conf *Configuration) ToJSON(w io.Writer) error {
-	e := json.NewEncoder(w)
+// Convert to yaml the config structure
+func (conf *Configuration) ToYAML(w io.Writer) error {
+	e := yaml.NewEncoder(w)
 	return e.Encode(conf)
 }
