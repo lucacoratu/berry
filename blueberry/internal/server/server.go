@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,7 +34,8 @@ type ProxyServer struct {
 	ServerAddress  string
 	ServerPort     string
 	HttpServer     *http.Server
-	//tcpServer *
+	TcpServer      net.Listener
+	TcpHandler     *handlers.BlueberryTCPHandler
 }
 
 // Structure that holds the information needed to run blueberry
@@ -192,7 +194,15 @@ func (server *BlueberryServer) Init() error {
 			r := mux.NewRouter()
 
 			//Create the handler which will contain the function to handle requests
-			handler := handlers.NewBlueberryHTTPHandler(server.logger, server.apiBaseURL, server.configuration, service.RemoteURL, server.checkers, server.rules, apiWsConnection)
+			handler := handlers.NewBlueberryHTTPHandler(
+				server.logger,
+				server.apiBaseURL,
+				server.configuration,
+				service.RemoteURL,
+				server.checkers,
+				server.rules,
+				apiWsConnection,
+			)
 
 			//Create a single route that will catch every request on every method
 			r.PathPrefix("/").HandlerFunc(handler.HandleRequest)
@@ -211,6 +221,36 @@ func (server *BlueberryServer) Init() error {
 						Handler:      r, // Pass our instance of gorilla/mux in.
 					}})
 		}
+
+		//If the service listening protocol is tcp or tcps
+		if service.ListeningProtocol == "tcp" || service.ListeningProtocol == "tcps" {
+			//Create the handler
+			tcpHandler := handlers.NewBlueberryTCPHandler(
+				server.logger,
+				server.apiBaseURL,
+				server.configuration,
+				service.RemoteURL,
+				server.checkers,
+				server.rules,
+				apiWsConnection,
+			)
+			//Create the tcp listener and add it to the proxy servers
+			listener, err := net.Listen("tcp", service.ListeningAddress+":"+service.ListeningPort)
+			//Check if an error occured
+			if err != nil {
+				server.logger.Fatal("Failed to create listener on ", service.ListeningAddress, ":", service.ListeningPort)
+				return err
+			}
+
+			server.proxyServers = append(server.proxyServers,
+				&ProxyServer{
+					ServerProtocol: service.ListeningProtocol,
+					ServerAddress:  service.ListeningAddress,
+					ServerPort:     service.ListeningPort,
+					TcpServer:      listener,
+					TcpHandler:     tcpHandler,
+				})
+		}
 	}
 
 	return nil
@@ -228,7 +268,7 @@ func (server *BlueberryServer) Run() {
 				if err := proxyServer.HttpServer.ListenAndServeTLS(server.configuration.SSLConfig.TLSCertificateFilepath, server.configuration.SSLConfig.TLSKeyFilepath); err != nil {
 					server.logger.Error(err.Error())
 				}
-			} else {
+			} else if proxyServer.ServerProtocol == "http" {
 				if err := proxyServer.HttpServer.ListenAndServe(); err != nil {
 					if errors.Is(err, http.ErrServerClosed) {
 						server.logger.Info("Received shutdown, server on port", proxyServer.ServerPort, "closed")
@@ -238,8 +278,23 @@ func (server *BlueberryServer) Run() {
 				}
 			}
 
+			if proxyServer.ServerProtocol == "tcp" {
+				for {
+					//Accept a new connection to the server
+					c, err := proxyServer.TcpServer.Accept()
+					//Check if error occured when accepting the connection
+					if err != nil {
+						server.logger.Error("Failed to accept connection", err.Error())
+						//Continue listening to connections
+						continue
+					}
+
+					//Handle the connection in a separate go routine
+					go proxyServer.TcpHandler.HandleTCPConnection(c)
+				}
+			}
 		}()
-		server.logger.Info("Started server on port", proxyServer.ServerPort)
+		server.logger.Info("Started", proxyServer.ServerProtocol, "server on port", proxyServer.ServerPort)
 	}
 
 	c := make(chan os.Signal, 1)
