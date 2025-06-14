@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+
+	b64 "encoding/base64"
 )
 
 // Check if the filepath is valid and exists on the disk
@@ -269,4 +271,91 @@ func FindFindingDataInRawdata(rawData string, searchString string) (int64, int64
 
 	//The string was not found
 	return -1, -1, nil
+}
+
+// Combines the request and response findings into a single slice
+func CombineFindings(requestFindings []models.FindingData, responseFindings []models.FindingData) []models.Finding {
+	//Add all the findings from all the validators to a list which will be sent to the API
+	allFindings := make([]models.Finding, 0)
+	//Add all request findings
+	for index, finding := range requestFindings {
+		if index < len(responseFindings) {
+			allFindings = append(allFindings, models.Finding{Request: finding, Response: responseFindings[index]})
+		} else {
+			allFindings = append(allFindings, models.Finding{Request: finding, Response: models.FindingData{}})
+		}
+	}
+
+	//Add the response findings
+	for index, finding := range responseFindings {
+		//If the index is less than the length of the all findings list then complete the index structure with the response findings
+		if index < len(allFindings) {
+			allFindings[index].Response = finding
+		} else {
+			//Otherwise add a new structure to the list of all findings which will have the Request empty
+			allFindings = append(allFindings, models.Finding{Request: models.FindingData{}, Response: finding})
+		}
+	}
+
+	return allFindings
+}
+
+func CombineRuleFindings(requestRuleFindings []*models.RuleFindingData, responseRuleFindings []*models.RuleFindingData) []models.RuleFinding {
+	//Add all the findings from all the validators to a list which will be sent to the API
+	allFindings := make([]models.RuleFinding, 0)
+	//Add all request findings
+	for index, finding := range requestRuleFindings {
+		if index < len(responseRuleFindings) {
+			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: responseRuleFindings[index]})
+		} else {
+			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: nil})
+		}
+	}
+
+	//Add the response findings
+	for index, finding := range responseRuleFindings {
+		//If the index is less than the length of the all findings list then complete the index structure with the response findings
+		if index < len(allFindings) {
+			allFindings[index].Response = finding
+		} else {
+			//Otherwise add a new structure to the list of all findings which will have the Request empty
+			allFindings = append(allFindings, models.RuleFinding{Request: nil, Response: finding})
+		}
+	}
+
+	return allFindings
+}
+
+// Converts the response to raw string then base64 encodes it
+func ConvertRequestToB64(req *http.Request) (string, error) {
+	//Dump the HTTP request to raw string
+	rawRequest, err := DumpHTTPRequest(req)
+	//Check if an error occured when dumping the request as raw string
+	if err != nil {
+		return "", err
+	}
+	//Convert raw request to base64
+	b64RawRequest := b64.StdEncoding.EncodeToString(rawRequest)
+	//Return the base64 string of the request and the response
+	return b64RawRequest, nil
+}
+
+// Converts the request and the response to raw string then base64 encodes both of them
+func ConvertRequestAndResponseToB64(req *http.Request, resp *http.Response) (string, string, error) {
+	//TODO...Use httputil.DumpRequest and DumpResponse functions
+
+	//Dump the HTTP request to raw string
+	rawRequest, _ := DumpHTTPRequest(req)
+	//Dump the response as raw string
+	rawResponse, err := DumpHTTPResponse(resp)
+	//Check if an error occured when dumping the response as raw string
+	if err != nil {
+		return "", "", err
+	}
+	//Convert raw request to base64
+	b64RawRequest := b64.StdEncoding.EncodeToString(rawRequest)
+	//Convert raw response to base64
+	b64RawResponse := b64.StdEncoding.EncodeToString(rawResponse)
+	//Return the base64 string of the request and the response
+	return b64RawRequest, b64RawResponse, nil
 }

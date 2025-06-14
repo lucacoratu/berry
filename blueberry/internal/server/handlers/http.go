@@ -2,25 +2,18 @@ package handlers
 
 import (
 	"bytes"
-	"encoding/base64"
-	b64 "encoding/base64"
 	"errors"
 	"io"
-	"log"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	ws_gorilla "github.com/gorilla/websocket"
 
 	"blueberry/internal/config"
-	api "blueberry/internal/cranberry"
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
 	"blueberry/internal/logging"
 	"blueberry/internal/models"
-	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
 )
 
@@ -109,140 +102,6 @@ func (bHandler *BlueberryHTTPHandler) forwardResponse(rw http.ResponseWriter, re
 	rw.Write(body)
 }
 
-// Combines the request and response findings into a single slice
-func (bHandler *BlueberryHTTPHandler) combineFindings(requestFindings []models.FindingData, responseFindings []models.FindingData) []models.Finding {
-	//Add all the findings from all the validators to a list which will be sent to the API
-	allFindings := make([]models.Finding, 0)
-	//Add all request findings
-	for index, finding := range requestFindings {
-		if index < len(responseFindings) {
-			allFindings = append(allFindings, models.Finding{Request: finding, Response: responseFindings[index]})
-		} else {
-			allFindings = append(allFindings, models.Finding{Request: finding, Response: models.FindingData{}})
-		}
-	}
-
-	//Add the response findings
-	for index, finding := range responseFindings {
-		//If the index is less than the length of the all findings list then complete the index structure with the response findings
-		if index < len(allFindings) {
-			allFindings[index].Response = finding
-		} else {
-			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, models.Finding{Request: models.FindingData{}, Response: finding})
-		}
-	}
-
-	return allFindings
-}
-
-func (bHandler *BlueberryHTTPHandler) combineRuleFindings(requestRuleFindings []*models.RuleFindingData, responseRuleFindings []*models.RuleFindingData) []models.RuleFinding {
-	//Add all the findings from all the validators to a list which will be sent to the API
-	allFindings := make([]models.RuleFinding, 0)
-	//Add all request findings
-	for index, finding := range requestRuleFindings {
-		if index < len(responseRuleFindings) {
-			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: responseRuleFindings[index]})
-		} else {
-			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: nil})
-		}
-	}
-
-	//Add the response findings
-	for index, finding := range responseRuleFindings {
-		//If the index is less than the length of the all findings list then complete the index structure with the response findings
-		if index < len(allFindings) {
-			allFindings[index].Response = finding
-		} else {
-			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, models.RuleFinding{Request: nil, Response: finding})
-		}
-	}
-
-	return allFindings
-}
-
-// Converts the response to raw string then base64 encodes it
-func (bHandler *BlueberryHTTPHandler) convertRequestToB64(req *http.Request) (string, error) {
-	//Dump the HTTP request to raw string
-	rawRequest, err := utils.DumpHTTPRequest(req)
-	//Check if an error occured when dumping the request as raw string
-	if err != nil {
-		bHandler.logger.Error(err.Error())
-		return "", err
-	}
-	//Convert raw request to base64
-	b64RawRequest := b64.StdEncoding.EncodeToString(rawRequest)
-	//Return the base64 string of the request and the response
-	return b64RawRequest, nil
-}
-
-// Converts the request and the response to raw string then base64 encodes both of them
-func (bHandler *BlueberryHTTPHandler) convertRequestAndResponseToB64(req *http.Request, resp *http.Response) (string, string, error) {
-	//Dump the HTTP request to raw string
-	rawRequest, _ := utils.DumpHTTPRequest(req)
-	//Dump the response as raw string
-	rawResponse, err := utils.DumpHTTPResponse(resp)
-	//Check if an error occured when dumping the response as raw string
-	if err != nil {
-		bHandler.logger.Error(err.Error())
-		return "", "", err
-	}
-	//Convert raw request to base64
-	b64RawRequest := b64.StdEncoding.EncodeToString(rawRequest)
-	//Convert raw response to base64
-	b64RawResponse := b64.StdEncoding.EncodeToString(rawResponse)
-	//Return the base64 string of the request and the response
-	return b64RawRequest, b64RawResponse, nil
-}
-
-// Handle the request if the agent is running in waf operation mode
-// @param requestFindings the code findings after checking the request
-// @param requestRuleFindings the findings after applying the rules on the request
-// Returns bool (true if the request should be dropped, false if should be allowed)
-// Returns error if an error occured during the handling of findings
-func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnRequest(requestFindings []models.FindingData, requestRuleFindings []*models.RuleFindingData) (bool, error) {
-	//Loop through all the code findings
-
-	//Loop through all the rules findings
-	for _, ruleFinding := range requestRuleFindings {
-		//Get the id of the rule
-		ruleAction := rules.GetRuleAction(bHandler.rules, ruleFinding.RuleId)
-		//Check if the rule action is drop
-		//If the rule action is empty the default behavior should be to drop
-		if ruleAction == "drop" || ruleAction == "" {
-			//The request should be blocked
-			return true, nil
-		}
-	}
-
-	//The request shouldn't be blocked
-	return false, nil
-}
-
-// Handle the response in waf operation mode
-// @param responseFindings the code findings after checking the request
-// @param responseRuleFindings the findings after applying the rules on the request
-// Returns bool (true if the request should be dropped, false if should be allowed)
-// Returns error if an error occured during the handling of findings
-func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnResponse(responseFindings []models.FindingData, responseRuleFindings []*models.RuleFindingData) (bool, error) {
-	//Loop through all the code findings
-
-	//Loop through all the rules findings
-	for _, ruleFinding := range responseRuleFindings {
-		//Get the id of the rule
-		ruleAction := rules.GetRuleAction(bHandler.rules, ruleFinding.RuleId)
-		//Check if the rule action is drop
-		//If the rule action is empty the default behavior should be to drop
-		if ruleAction == "drop" || ruleAction == "" {
-			//The request should be blocked
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 // Upgrader for the websocket
 var upgrader = ws_gorilla.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -250,125 +109,26 @@ var upgrader = ws_gorilla.Upgrader{
 	},
 }
 
-// Handle websocket messages
-func (bHandler *BlueberryHTTPHandler) HandleWebsocketConnection(rw http.ResponseWriter, r *http.Request) {
-	// Upgrade incoming HTTP request to WebSocket
-	clientConn, err := upgrader.Upgrade(rw, r, nil)
-	if err != nil {
-		log.Println("Upgrade error:", err)
-		return
-	}
-	defer clientConn.Close()
-
-	bHandler.logger.Debug("Upgraded to websocket connection")
-
-	// Dial to target backend WebSocket server
-	backendConn, _, err := ws_gorilla.DefaultDialer.Dial(bHandler.forwardServerUrl, nil)
-	if err != nil {
-		log.Println("Dial error:", err)
-		return
-	}
-	defer backendConn.Close()
-
-	// Proxy messages between client and backend
-	errc := make(chan error, 2)
-
-	//Proxy messages from client to the backend web server
-	go bHandler.proxyWS(clientConn, backendConn, errc)
-	//Proxy messages from the backend web server to the client
-	go bHandler.proxyWS(backendConn, clientConn, errc)
-
-	<-errc // wait for first error or disconnect
-}
-
-func (bHandler *BlueberryHTTPHandler) proxyWS(src, dest *ws_gorilla.Conn, errc chan error) {
-	//Create the rule runner
-	ruleRunner := rules.NewRuleRunner(bHandler.logger, bHandler.rules, bHandler.apiWsConn, bHandler.configuration)
-
-	for {
-		mt, message, err := src.ReadMessage()
-		if err != nil {
-			bHandler.logger.Error("Websocket connection closed,", err.Error())
-			errc <- err
-			return
-		}
-
-		//Apply the rules on the websocket messages
-		findings, err := ruleRunner.RunRulesOnWebsocketMessage(mt, message)
-		if err != nil {
-			bHandler.logger.Error("Error when running rules on websocket message", err.Error())
-		}
-		bHandler.logger.Debug(findings)
-
-		//Convert the request to base64
-		b64RawRequest := b64.StdEncoding.EncodeToString(message)
-
-		//Initialize the request should be blocked variable
-		var requestBlocked bool = false
-
-		//Add all the findings from all the validators to a list which will be sent to the API
-		allFindings := make([]models.RuleFinding, 0)
-		//Add all request findings
-		for _, finding := range findings {
-			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: nil})
-
-			//Check if operation mode of the agent is waf
-			if bHandler.configuration.OperationMode == "waf" {
-				rule_action := rules.GetRuleAction(bHandler.rules, finding.RuleId)
-				if rule_action == "drop" || rule_action == "" {
-					requestBlocked = true
-				}
-			}
-		}
-
-		//Initialize the forbidden message
-		forbiddenMessage := []byte("{\"status_code\": 403, \"message\": \"Forbidden, you do not have permissions to access this resource\"}")
-
-		//Create the log structure that should be sent to the API
-		logData := models.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: src.NetConn().RemoteAddr().String(), Timestamp: time.Now().Unix(), Websocket: true, Request: b64RawRequest, Response: "", Findings: nil, RuleFindings: allFindings}
-
-		//If the request is blocked then add the forbidden message as response in the log data
-		if requestBlocked {
-			logData.Response = b64.StdEncoding.EncodeToString(forbiddenMessage)
-		}
-
-		bHandler.logger.Debug("Log data", logData)
-
-		//Send the findings to the API
-		if bHandler.apiWsConn != nil {
-			//Send log information to the API
-			apiHandler := api.NewAPIHandler(bHandler.logger, bHandler.configuration)
-			_, err = apiHandler.SendLog(bHandler.apiBaseURL, logData)
-			//Check if an error occured when sending log to the API
-			if err != nil {
-				bHandler.logger.Error(err.Error())
-				//return
-			}
-		}
-
-		//If the request is blocked
-		if requestBlocked {
-			src.WriteMessage(ws_gorilla.TextMessage, forbiddenMessage)
-		}
-
-		if !requestBlocked {
-			err = dest.WriteMessage(mt, message)
-			if err != nil {
-				bHandler.logger.Error("Websocket connection closed,", err.Error())
-				errc <- err
-				return
-			}
-		}
-	}
-}
-
 // Handles the requests received by the agent
 func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *http.Request) {
 	//Check if the request is a websocket upgrade
 	if ws_gorilla.IsWebSocketUpgrade(r) {
-		bHandler.logger.Debug("Websocket upgrade message received")
+		//Create the websocket handler
+		wsHandler := NewBlueberryWebsocketHandler(
+			bHandler.logger,
+			bHandler.apiBaseURL,
+			bHandler.configuration,
+			bHandler.forwardServerUrl,
+			bHandler.checkers,
+			bHandler.rules,
+			bHandler.apiWsConn,
+		)
+
+		bHandler.logger.Debug("Websocket upgrade message received from", r.RemoteAddr)
+
 		//Handle the websocket connection separately
-		bHandler.HandleWebsocketConnection(rw, r)
+		wsHandler.HandleWebsocketConnection(rw, r)
+
 		//Return from the function
 		return
 	}
@@ -376,140 +136,55 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	//Log the endpoint where the request was made
 	bHandler.logger.Info("Received", r.Method, "request on", r.URL.Path)
 
-	//Create the validator runner
-	validatorRunner := code.NewValidatorRunner(bHandler.checkers, bHandler.logger)
 	//Create the rule runner
 	ruleRunner := rules.NewRuleRunner(bHandler.logger, bHandler.rules, bHandler.apiWsConn, bHandler.configuration)
 
-	//Run all the validators on the request
-	requestFindings, _ := validatorRunner.RunValidatorsOnRequest(r)
 	//Run all the rules on the request
 	startTime := time.Now()
 	requestRuleFindings, _ := ruleRunner.RunRulesOnRequest(r)
 	endTime := time.Now()
-	bHandler.logger.Debug("Applied rules on request in", float64(endTime.UnixNano()-startTime.UnixNano())/float64(1000000), "ms")
 
-	//Log request findings
-	bHandler.logger.Debug("Request findings", requestFindings)
+	bHandler.logger.Debug("Applied", len(bHandler.rules), "rules on request in", float64(endTime.UnixNano()-startTime.UnixNano())/float64(1000000), "ms")
+
 	//Log the request rule findings
 	bHandler.logger.Debug("Request rule findings", requestRuleFindings)
 
-	//If the mode of operation is waf check the action from the rule
-	//If the action specified inside the rule is block then the forbidden page should be sent to the client
-	var requestDropped bool = false
-	var err error = nil
+	//Get the verdict based on the findings
+	verdict := rules.GetVerdictBasedOnFindings(bHandler.rules, bHandler.configuration.RuleConfig.DefaultAction, requestRuleFindings)
 
-	//Check if the operation mode is waf and the forbidden page has been returned
-	//If the forbidden page has been returned then the request should not be forwarded to the target service
-	//Also the rules and validators shouldn't be applied on response (as it will always be the forbidden page)
-	if bHandler.configuration.OperationMode == "waf" {
-		requestDropped, err = bHandler.HandleWAFOperationModeOnRequest(requestFindings, requestRuleFindings)
-		if err != nil {
-			bHandler.logger.Error("Error occured when handling waf operation mode on request", err.Error())
-		}
-	}
-
-	var response *http.Response = nil
-	var responseFindings []models.FindingData = make([]models.FindingData, 0)
-	var responseRuleFindings []*models.RuleFindingData = make([]*models.RuleFindingData, 0)
-
-	//Initialize the response dropped
-	var responseDropped bool = false
-
-	if !requestDropped || bHandler.configuration.OperationMode != "waf" {
-		//Forward the request to the destination web server
-		response, err = bHandler.forwardRequest(r)
-		if err != nil {
-			bHandler.logger.Error(err.Error())
-			return
-		}
-
-		//Run the validators on the response
-		responseFindings, _ = validatorRunner.RunValidatorsOnResponse(response)
-		//Run the rules on the response
-		responseRuleFindings, _ = ruleRunner.RunRulesOnResponse(response)
-
-		//Log response findings
-		bHandler.logger.Debug("Response findings", responseFindings)
-		//Log the rules response findings
-		bHandler.logger.Debug("Response rule findings", responseRuleFindings)
-
-		//Check if the response should be dropped
-		responseDropped, err = bHandler.HandleWAFOperationModeOnResponse(responseFindings, responseRuleFindings)
-		if err != nil {
-			bHandler.logger.Error("Error occured when handling waf operation mode on request", err.Error())
-		}
-	}
-
-	//Combine the findings into a single structure
-	//If the request is not forwarded then the response findings should be empty arrays
-	allFindings := bHandler.combineFindings(requestFindings, responseFindings)
-	//Combine the rule findings into a single structure
-	allRuleFindings := bHandler.combineRuleFindings(requestRuleFindings, responseRuleFindings)
-
-	//Convert the request and response to base64 string
-	//If the response is nil (the request was dropped then convert the forbidden page to base64)
-	var b64RawRequest string = ""
-	var b64RawResponse string = ""
-	if !requestDropped {
-		b64RawRequest, b64RawResponse, _ = bHandler.convertRequestAndResponseToB64(r, response)
-	} else {
-		forbiddenPageContent, err := os.ReadFile(bHandler.configuration.RuleConfig.ForbiddenHTTPPath)
-		//Check if an error occured when reading forbidden page
-		if err != nil {
-			forbiddenPageContent = []byte("Forbidden")
-		}
-		rawResponse := append([]byte("HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\n\r\n"), forbiddenPageContent...)
-		b64RawResponse = base64.StdEncoding.EncodeToString(rawResponse)
-
-		//Dump the HTTP request to raw string
-		rawRequest, _ := utils.DumpHTTPRequest(r)
-		//Convert raw request to base64
-		b64RawRequest = b64.StdEncoding.EncodeToString(rawRequest)
-	}
-
-	//Create the log structure that should be sent to the API
-	logData := models.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: r.RemoteAddr, Timestamp: time.Now().Unix(), Websocket: false, Request: b64RawRequest, Response: b64RawResponse, Findings: allFindings, RuleFindings: allRuleFindings}
-
-	if true {
-		bHandler.logger.Debug("Log data", logData)
-	}
-
-	if bHandler.apiWsConn != nil {
-		//Send log information to the API
-		apiHandler := api.NewAPIHandler(bHandler.logger, bHandler.configuration)
-		_, err = apiHandler.SendLog(bHandler.apiBaseURL, logData)
-		//Check if an error occured when sending log to the API
-		if err != nil {
-			bHandler.logger.Error(err.Error())
-			//return
-		}
-	}
-
-	//Send the forbidden page if the request should be dropped and the operation mode is waf
-	if (requestDropped || responseDropped) && bHandler.configuration.OperationMode == "waf" {
-		//Send the forbidden page
-		//Read the forbidden page from the disk
-		forbiddenPageContent, err := os.ReadFile(bHandler.configuration.RuleConfig.ForbiddenHTTPPath)
-
-		//Check if an error occured when reading forbidden page
-		if err != nil {
-			bHandler.logger.Error("Failed to read forbidden page from disk,", err.Error())
-			rw.WriteHeader(http.StatusForbidden)
-			rw.Write([]byte("Forbidden"))
-			return
-		}
-
-		//Send the content of forbidden file to client
+	//If the verdict is drop then send the forbidden page back to the client
+	if verdict == "drop" {
 		rw.WriteHeader(http.StatusForbidden)
-		rw.Write(forbiddenPageContent)
+		rw.Write([]byte(bHandler.configuration.RuleConfig.ForbiddenHTTPMessage))
+
+		//TODO...Send the log to cranberry
 		return
 	}
 
-	//If the mode is testing then send the log data as response
-	if strings.EqualFold(bHandler.configuration.OperationMode, "testing") {
-		rw.WriteHeader(http.StatusOK)
-		logData.ToJSON(rw)
+	var responseRuleFindings []*models.RuleFindingData = make([]*models.RuleFindingData, 0)
+
+	//Forward the request to the destination web server
+	response, err := bHandler.forwardRequest(r)
+	if err != nil {
+		bHandler.logger.Error(err.Error())
+		return
+	}
+
+	//Run the rules on the response
+	responseRuleFindings, _ = ruleRunner.RunRulesOnResponse(response)
+
+	//Log the rules response findings
+	bHandler.logger.Debug("Response rule findings", responseRuleFindings)
+
+	//Get the verdict for the response
+	verdictResponse := rules.GetVerdictBasedOnFindings(bHandler.rules, bHandler.configuration.RuleConfig.DefaultAction, responseRuleFindings)
+
+	//If the verdict is drop then send the forbidden http message
+	if verdictResponse == "drop" {
+		rw.WriteHeader(http.StatusForbidden)
+		rw.Write([]byte(bHandler.configuration.RuleConfig.ForbiddenHTTPMessage))
+
+		//TODO...Send log to cranberry
 		return
 	}
 

@@ -41,11 +41,11 @@ func completeDefaultValues(conf *Configuration) {
 	//If the default forbidden message is missing for http
 	if conf.RuleConfig.ForbiddenHTTPMessage == "" {
 		conf.RuleConfig.ForbiddenHTTPMessage = `
-		<html>
-			<h1>Forbidden</h1>
-			<p>You don't have access for this resource</p>
-			<p>If you think you did nothing wrong, contact the administrator</p>
-		</html>
+<html>
+	<h1>Forbidden</h1>
+	<p>You don't have access for this resource</p>
+	<p>If you think you did nothing wrong, contact the server administrator</p>
+</html>
 		`
 	}
 
@@ -181,6 +181,13 @@ func checkConfiguration(config *Configuration) error {
 
 			//The protocol is correct so make it lowercase
 			config.Services[i].RemoteProtocol = strings.ToLower(service.RemoteProtocol)
+		}
+	}
+
+	//Check the operation mode
+	if config.OperationMode != "" {
+		if config.OperationMode != "waf" && config.OperationMode != "testing" {
+			return errors.New("operation mode can only be waf or testing")
 		}
 	}
 

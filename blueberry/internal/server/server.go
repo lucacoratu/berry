@@ -112,7 +112,7 @@ func (server *BlueberryServer) Init() error {
 
 	//Check connection to the api
 	if !utils.CheckAPIConnection(server.apiBaseURL) {
-		server.logger.Warning("Cannot connect to the API")
+		server.logger.Warning("Cannot connect to cranberry")
 		//return errors.New("could not connect to the API")
 	}
 
