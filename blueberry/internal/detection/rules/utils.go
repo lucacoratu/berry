@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"blueberry/internal/config"
+	"blueberry/internal/logging"
 	data "blueberry/internal/models"
-	"blueberry/pkg/logging"
 )
 
 var SupportedEncodings = []string{"base64", "url"}

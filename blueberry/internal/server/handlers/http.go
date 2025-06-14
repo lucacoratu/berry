@@ -18,10 +18,10 @@ import (
 	api "blueberry/internal/cranberry"
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
+	"blueberry/internal/logging"
 	data "blueberry/internal/models"
 	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
-	"blueberry/pkg/logging"
 )
 
 /*

@@ -1,15 +1,27 @@
 services:
-  - lprotocol: http
+  - name: "Test service 1"
+    lprotocol: http
     laddress: 0.0.0.0
-    lport: '8080'
+    lport: 8080
     rprotocol: http
     raddress: 127.0.0.1
-    rport: '8082'
+    rport: 8081
+
+  - name: "Test service 2"
+    lprotocol: http
+    laddress: 0.0.0.0
+    lport: 8081
+    rprotocol: http
+    raddress: 127.0.0.1
+    rport: 8083
+
 rules:
   rules_directory: "./rules"
   default_action: allow
+
 logging:
   logger_type: console
+
 cranberry_url: http://127.0.0.1:9000
 uuid: ''
 operation_mode: waf

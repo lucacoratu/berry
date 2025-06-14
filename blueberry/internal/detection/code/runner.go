@@ -3,8 +3,8 @@ package detection
 import (
 	"net/http"
 
+	"blueberry/internal/logging"
 	data "blueberry/internal/models"
-	"blueberry/pkg/logging"
 )
 
 type ValidatorRunner struct {

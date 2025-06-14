@@ -13,10 +13,10 @@ import (
 	"blueberry/internal/config"
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
+	"blueberry/internal/logging"
 	"blueberry/internal/server/handlers"
 	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
-	"blueberry/pkg/logging"
 
 	"github.com/gorilla/mux"
 )

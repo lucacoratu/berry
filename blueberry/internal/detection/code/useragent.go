@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"blueberry/internal/config"
-	"blueberry/pkg/logging"
+	"blueberry/internal/logging"
 
 	data "blueberry/internal/models"
 )

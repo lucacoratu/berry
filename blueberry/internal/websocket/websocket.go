@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"blueberry/internal/config"
-	"blueberry/pkg/logging"
+	"blueberry/internal/logging"
 
 	"github.com/gorilla/websocket"
 )

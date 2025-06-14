@@ -8,8 +8,8 @@ import (
 	"strconv"
 
 	"blueberry/internal/config"
+	"blueberry/internal/logging"
 	data "blueberry/internal/models"
-	"blueberry/pkg/logging"
 )
 
 // Holds data necessary in order to communicate with collector

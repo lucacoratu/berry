@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"blueberry/internal/config"
+	"blueberry/internal/logging"
 	data "blueberry/internal/models"
 	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
-	"blueberry/pkg/logging"
 
 	"github.com/mowshon/iterium"
 )
