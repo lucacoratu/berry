@@ -451,7 +451,7 @@ func GetRuleAction(rules []Rule, ruleId string) string {
 // @param rules - the list of rules loaded from disk
 // @param defaultAction - the default action specified in the rules config
 // @param findings - the list of rule findings
-func GetVerdictBasedOnFindings(rules []Rule, defaultAction string, findings []*models.RuleFindingData) string {
+func GetVerdictBasedOnFindings(rules []Rule, defaultAction string, findings []*models.FindingData) string {
 	//Loop through the findings
 	for _, finding := range findings {
 		//Get the rule action

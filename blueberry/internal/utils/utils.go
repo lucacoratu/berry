@@ -273,42 +273,15 @@ func FindFindingDataInRawdata(rawData string, searchString string) (int64, int64
 	return -1, -1, nil
 }
 
-// Combines the request and response findings into a single slice
-func CombineFindings(requestFindings []models.FindingData, responseFindings []models.FindingData) []models.Finding {
+func CombineFindings(requestRuleFindings []*models.FindingData, responseRuleFindings []*models.FindingData) []models.Finding {
 	//Add all the findings from all the validators to a list which will be sent to the API
 	allFindings := make([]models.Finding, 0)
 	//Add all request findings
-	for index, finding := range requestFindings {
-		if index < len(responseFindings) {
-			allFindings = append(allFindings, models.Finding{Request: finding, Response: responseFindings[index]})
-		} else {
-			allFindings = append(allFindings, models.Finding{Request: finding, Response: models.FindingData{}})
-		}
-	}
-
-	//Add the response findings
-	for index, finding := range responseFindings {
-		//If the index is less than the length of the all findings list then complete the index structure with the response findings
-		if index < len(allFindings) {
-			allFindings[index].Response = finding
-		} else {
-			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, models.Finding{Request: models.FindingData{}, Response: finding})
-		}
-	}
-
-	return allFindings
-}
-
-func CombineRuleFindings(requestRuleFindings []*models.RuleFindingData, responseRuleFindings []*models.RuleFindingData) []models.RuleFinding {
-	//Add all the findings from all the validators to a list which will be sent to the API
-	allFindings := make([]models.RuleFinding, 0)
-	//Add all request findings
 	for index, finding := range requestRuleFindings {
 		if index < len(responseRuleFindings) {
-			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: responseRuleFindings[index]})
+			allFindings = append(allFindings, models.Finding{Request: finding, Response: responseRuleFindings[index]})
 		} else {
-			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: nil})
+			allFindings = append(allFindings, models.Finding{Request: finding, Response: nil})
 		}
 	}
 
@@ -319,7 +292,7 @@ func CombineRuleFindings(requestRuleFindings []*models.RuleFindingData, response
 			allFindings[index].Response = finding
 		} else {
 			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, models.RuleFinding{Request: nil, Response: finding})
+			allFindings = append(allFindings, models.Finding{Request: nil, Response: finding})
 		}
 	}
 

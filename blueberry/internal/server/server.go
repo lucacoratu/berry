@@ -24,11 +24,14 @@ import (
 
 // Proxy server is the abstraction used by the Blueberry server to manage the proxy instances
 // @fields
-// ServerType - The underling server type (can be http, https, tcp, tcps) - the same available in the configuration
+// ServerProtocol - The underling server type (can be http, https, tcp, tcps) - the same available in the configuration
 // ServerAddress - The address the server is listening on
 // ServerPort - The port the server is listening on
-// httpServer - The http server to be used in case the ServerType is http
-// TODO...TCP server type
+// HttpServer - The http server to be used in case the ServerProtocol is http
+// TcpServer - The tcp server to be used in case the ServerProtocol is tcp
+// TcpHandler - The handler for tcp connections
+// UdpServer - The udp server to be used in case the ServerProtocol is udp
+// UdpHandler - The handler for udp connections
 type ProxyServer struct {
 	ServerProtocol string
 	ServerAddress  string
@@ -36,6 +39,8 @@ type ProxyServer struct {
 	HttpServer     *http.Server
 	TcpServer      net.Listener
 	TcpHandler     *handlers.BlueberryTCPHandler
+	UdpServer      net.Listener
+	UdpHandler     *handlers.BlueberryUDPHandler
 }
 
 // Structure that holds the information needed to run blueberry
@@ -223,6 +228,7 @@ func (server *BlueberryServer) Init() error {
 		}
 
 		//If the service listening protocol is tcp or tcps
+		//TODO...Check for tls version
 		if service.ListeningProtocol == "tcp" || service.ListeningProtocol == "tcps" {
 			//Create the handler
 			tcpHandler := handlers.NewBlueberryTCPHandler(
@@ -238,7 +244,7 @@ func (server *BlueberryServer) Init() error {
 			listener, err := net.Listen("tcp", service.ListeningAddress+":"+service.ListeningPort)
 			//Check if an error occured
 			if err != nil {
-				server.logger.Fatal("Failed to create listener on ", service.ListeningAddress, ":", service.ListeningPort)
+				server.logger.Fatal("Failed to create tcp listener on ", service.ListeningAddress, ":", service.ListeningPort)
 				return err
 			}
 
@@ -249,6 +255,37 @@ func (server *BlueberryServer) Init() error {
 					ServerPort:     service.ListeningPort,
 					TcpServer:      listener,
 					TcpHandler:     tcpHandler,
+				})
+		}
+
+		//If the service listening protocol is udp
+		if service.ListeningProtocol == "udp" {
+			//Create the handler
+			udpHandler := handlers.NewBlueberryUDPHandler(
+				server.logger,
+				server.apiBaseURL,
+				server.configuration,
+				service.RemoteURL,
+				server.checkers,
+				server.rules,
+				apiWsConnection,
+			)
+
+			//Create the udp listener and add it to proxy servers
+			listener, err := net.Listen("udp", service.ListeningAddress+":"+service.ListeningPort)
+			//Check for errors
+			if err != nil {
+				server.logger.Fatal("Failed to create udp listener on ", service.ListeningAddress, ":", service.ListeningPort)
+				return err
+			}
+
+			server.proxyServers = append(server.proxyServers,
+				&ProxyServer{
+					ServerProtocol: service.ListeningProtocol,
+					ServerAddress:  service.ListeningAddress,
+					ServerPort:     service.ListeningPort,
+					UdpServer:      listener,
+					UdpHandler:     udpHandler,
 				})
 		}
 	}
@@ -291,6 +328,20 @@ func (server *BlueberryServer) Run() {
 
 					//Handle the connection in a separate go routine
 					go proxyServer.TcpHandler.HandleTCPConnection(c)
+				}
+			}
+
+			if proxyServer.ServerProtocol == "udp" {
+				for {
+					//Accept a new connection to the server
+					c, err := proxyServer.UdpServer.Accept()
+					//Check if an error occured when accepting the connection
+					if err != nil {
+						server.logger.Error("Failed to accept connection", err.Error())
+						continue
+					}
+
+					go proxyServer.UdpHandler.HandleUDPConnection(c)
 				}
 			}
 		}()

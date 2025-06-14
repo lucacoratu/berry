@@ -13,7 +13,6 @@ import (
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
 	"blueberry/internal/logging"
-	"blueberry/internal/models"
 	"blueberry/internal/websocket"
 )
 
@@ -161,8 +160,6 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 		return
 	}
 
-	var responseRuleFindings []*models.RuleFindingData = make([]*models.RuleFindingData, 0)
-
 	//Forward the request to the destination web server
 	response, err := bHandler.forwardRequest(r)
 	if err != nil {
@@ -171,7 +168,7 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	}
 
 	//Run the rules on the response
-	responseRuleFindings, _ = ruleRunner.RunRulesOnResponse(response)
+	responseRuleFindings, _ := ruleRunner.RunRulesOnResponse(response)
 
 	//Log the rules response findings
 	bHandler.logger.Debug("Response rule findings", responseRuleFindings)
