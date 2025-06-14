@@ -82,6 +82,9 @@ func (bth *BlueberryTCPHandler) ProxyRequests(clientConn net.Conn, errc chan err
 
 	//TODO...Add timeout to read
 
+	//Initialize the rules runner
+	ruleRunner := rules.NewRuleRunner(bth.logger, bth.rules, bth.apiWsConn, bth.configuration)
+
 	//Infinite loop
 	for {
 		//Read from the client connection max DefaultBufferSize bytes
@@ -96,6 +99,25 @@ func (bth *BlueberryTCPHandler) ProxyRequests(clientConn net.Conn, errc chan err
 		//Make the buffer the correct size
 		buf = buf[:readBytes]
 		bth.logger.Debug("Received tcp message from", clientConn.RemoteAddr().String(), "content", string(buf))
+
+		//Apply the tcp request rules
+		findings, err := ruleRunner.ApplyRulesOnTCPMessage("ingress", buf)
+		if err != nil {
+			bth.logger.Warning("Failed to apply rules on ingress TCP message", err.Error())
+		}
+		bth.logger.Debug("Ingress findings", findings)
+
+		//Get the verdict based on findings
+		verdict := rules.GetVerdictBasedOnFindings(bth.rules, bth.configuration.RuleConfig.DefaultAction, findings)
+		if verdict == "drop" {
+			//Send the drop message for tcp connection
+			_, err := clientConn.Write([]byte(bth.configuration.RuleConfig.ForbiddenTCPMessage))
+			if err != nil {
+				bth.logger.Error("Failed to send forbidden message to", clientConn.RemoteAddr().String(), err.Error())
+			}
+			//Continue to next read (protect target server)
+			continue
+		}
 
 		//Write the buffer to the target server
 		_, err = bth.targetTcpServer.Write(buf)
@@ -118,6 +140,9 @@ func (bth *BlueberryTCPHandler) ProxyResponses(clientConn net.Conn, errc chan er
 
 	//TODO...Add timeout to read
 
+	//Initialize the rules runner
+	ruleRunner := rules.NewRuleRunner(bth.logger, bth.rules, bth.apiWsConn, bth.configuration)
+
 	//Infinite loop
 	for {
 		//Read from the client connection max DefaultBufferSize bytes
@@ -132,6 +157,25 @@ func (bth *BlueberryTCPHandler) ProxyResponses(clientConn net.Conn, errc chan er
 		//Make the buffer the correct size
 		buf = buf[:readBytes]
 		bth.logger.Debug("Received tcp message from target server, content", string(buf))
+
+		//Apply the response tcp rules
+		findings, err := ruleRunner.ApplyRulesOnTCPMessage("egress", buf)
+		if err != nil {
+			bth.logger.Error("Failed to apply rules on egress TCP message", err.Error())
+		}
+		bth.logger.Debug("Egress findings", findings)
+
+		//Get the verdict based on findings
+		verdict := rules.GetVerdictBasedOnFindings(bth.rules, bth.configuration.RuleConfig.DefaultAction, findings)
+		if verdict == "drop" {
+			//Send the drop message for tcp connection
+			_, err := clientConn.Write([]byte(bth.configuration.RuleConfig.ForbiddenTCPMessage))
+			if err != nil {
+				bth.logger.Error("Failed to send forbidden message to", clientConn.RemoteAddr().String(), err.Error())
+			}
+			//Continue to next read (the message has been sent to client)
+			continue
+		}
 
 		//Write the buffer to the target server
 		_, err = clientConn.Write(buf)

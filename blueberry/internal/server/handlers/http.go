@@ -19,7 +19,7 @@ import (
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
 	"blueberry/internal/logging"
-	data "blueberry/internal/models"
+	"blueberry/internal/models"
 	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
 )
@@ -110,15 +110,15 @@ func (bHandler *BlueberryHTTPHandler) forwardResponse(rw http.ResponseWriter, re
 }
 
 // Combines the request and response findings into a single slice
-func (bHandler *BlueberryHTTPHandler) combineFindings(requestFindings []data.FindingData, responseFindings []data.FindingData) []data.Finding {
+func (bHandler *BlueberryHTTPHandler) combineFindings(requestFindings []models.FindingData, responseFindings []models.FindingData) []models.Finding {
 	//Add all the findings from all the validators to a list which will be sent to the API
-	allFindings := make([]data.Finding, 0)
+	allFindings := make([]models.Finding, 0)
 	//Add all request findings
 	for index, finding := range requestFindings {
 		if index < len(responseFindings) {
-			allFindings = append(allFindings, data.Finding{Request: finding, Response: responseFindings[index]})
+			allFindings = append(allFindings, models.Finding{Request: finding, Response: responseFindings[index]})
 		} else {
-			allFindings = append(allFindings, data.Finding{Request: finding, Response: data.FindingData{}})
+			allFindings = append(allFindings, models.Finding{Request: finding, Response: models.FindingData{}})
 		}
 	}
 
@@ -129,22 +129,22 @@ func (bHandler *BlueberryHTTPHandler) combineFindings(requestFindings []data.Fin
 			allFindings[index].Response = finding
 		} else {
 			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, data.Finding{Request: data.FindingData{}, Response: finding})
+			allFindings = append(allFindings, models.Finding{Request: models.FindingData{}, Response: finding})
 		}
 	}
 
 	return allFindings
 }
 
-func (bHandler *BlueberryHTTPHandler) combineRuleFindings(requestRuleFindings []*data.RuleFindingData, responseRuleFindings []*data.RuleFindingData) []data.RuleFinding {
+func (bHandler *BlueberryHTTPHandler) combineRuleFindings(requestRuleFindings []*models.RuleFindingData, responseRuleFindings []*models.RuleFindingData) []models.RuleFinding {
 	//Add all the findings from all the validators to a list which will be sent to the API
-	allFindings := make([]data.RuleFinding, 0)
+	allFindings := make([]models.RuleFinding, 0)
 	//Add all request findings
 	for index, finding := range requestRuleFindings {
 		if index < len(responseRuleFindings) {
-			allFindings = append(allFindings, data.RuleFinding{Request: finding, Response: responseRuleFindings[index]})
+			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: responseRuleFindings[index]})
 		} else {
-			allFindings = append(allFindings, data.RuleFinding{Request: finding, Response: nil})
+			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: nil})
 		}
 	}
 
@@ -155,7 +155,7 @@ func (bHandler *BlueberryHTTPHandler) combineRuleFindings(requestRuleFindings []
 			allFindings[index].Response = finding
 		} else {
 			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, data.RuleFinding{Request: nil, Response: finding})
+			allFindings = append(allFindings, models.RuleFinding{Request: nil, Response: finding})
 		}
 	}
 
@@ -201,7 +201,7 @@ func (bHandler *BlueberryHTTPHandler) convertRequestAndResponseToB64(req *http.R
 // @param requestRuleFindings the findings after applying the rules on the request
 // Returns bool (true if the request should be dropped, false if should be allowed)
 // Returns error if an error occured during the handling of findings
-func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnRequest(requestFindings []data.FindingData, requestRuleFindings []*data.RuleFindingData) (bool, error) {
+func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnRequest(requestFindings []models.FindingData, requestRuleFindings []*models.RuleFindingData) (bool, error) {
 	//Loop through all the code findings
 
 	//Loop through all the rules findings
@@ -225,7 +225,7 @@ func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnRequest(requestFin
 // @param responseRuleFindings the findings after applying the rules on the request
 // Returns bool (true if the request should be dropped, false if should be allowed)
 // Returns error if an error occured during the handling of findings
-func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnResponse(responseFindings []data.FindingData, responseRuleFindings []*data.RuleFindingData) (bool, error) {
+func (bHandler *BlueberryHTTPHandler) HandleWAFOperationModeOnResponse(responseFindings []models.FindingData, responseRuleFindings []*models.RuleFindingData) (bool, error) {
 	//Loop through all the code findings
 
 	//Loop through all the rules findings
@@ -307,10 +307,10 @@ func (bHandler *BlueberryHTTPHandler) proxyWS(src, dest *ws_gorilla.Conn, errc c
 		var requestBlocked bool = false
 
 		//Add all the findings from all the validators to a list which will be sent to the API
-		allFindings := make([]data.RuleFinding, 0)
+		allFindings := make([]models.RuleFinding, 0)
 		//Add all request findings
 		for _, finding := range findings {
-			allFindings = append(allFindings, data.RuleFinding{Request: finding, Response: nil})
+			allFindings = append(allFindings, models.RuleFinding{Request: finding, Response: nil})
 
 			//Check if operation mode of the agent is waf
 			if bHandler.configuration.OperationMode == "waf" {
@@ -325,7 +325,7 @@ func (bHandler *BlueberryHTTPHandler) proxyWS(src, dest *ws_gorilla.Conn, errc c
 		forbiddenMessage := []byte("{\"status_code\": 403, \"message\": \"Forbidden, you do not have permissions to access this resource\"}")
 
 		//Create the log structure that should be sent to the API
-		logData := data.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: src.NetConn().RemoteAddr().String(), Timestamp: time.Now().Unix(), Websocket: true, Request: b64RawRequest, Response: "", Findings: nil, RuleFindings: allFindings}
+		logData := models.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: src.NetConn().RemoteAddr().String(), Timestamp: time.Now().Unix(), Websocket: true, Request: b64RawRequest, Response: "", Findings: nil, RuleFindings: allFindings}
 
 		//If the request is blocked then add the forbidden message as response in the log data
 		if requestBlocked {
@@ -410,8 +410,8 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	}
 
 	var response *http.Response = nil
-	var responseFindings []data.FindingData = make([]data.FindingData, 0)
-	var responseRuleFindings []*data.RuleFindingData = make([]*data.RuleFindingData, 0)
+	var responseFindings []models.FindingData = make([]models.FindingData, 0)
+	var responseRuleFindings []*models.RuleFindingData = make([]*models.RuleFindingData, 0)
 
 	//Initialize the response dropped
 	var responseDropped bool = false
@@ -469,7 +469,7 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	}
 
 	//Create the log structure that should be sent to the API
-	logData := data.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: r.RemoteAddr, Timestamp: time.Now().Unix(), Websocket: false, Request: b64RawRequest, Response: b64RawResponse, Findings: allFindings, RuleFindings: allRuleFindings}
+	logData := models.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: r.RemoteAddr, Timestamp: time.Now().Unix(), Websocket: false, Request: b64RawRequest, Response: b64RawResponse, Findings: allFindings, RuleFindings: allRuleFindings}
 
 	if true {
 		bHandler.logger.Debug("Log data", logData)

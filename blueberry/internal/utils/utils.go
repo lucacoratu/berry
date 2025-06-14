@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"blueberry/internal/models"
 	"bufio"
 	"bytes"
 	"errors"
@@ -12,8 +13,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-
-	data "blueberry/internal/models"
 )
 
 // Check if the filepath is valid and exists on the disk
@@ -75,8 +74,8 @@ func CheckAPIConnection(apiBaseURL string) bool {
 }
 
 // Collects information about the machine
-func GetMachineInfo() (data.MachineInformation, error) {
-	machineInfo := data.MachineInformation{}
+func GetMachineInfo() (models.MachineInformation, error) {
+	machineInfo := models.MachineInformation{}
 	//Get the operating system
 	machineInfo.OS = runtime.GOOS
 	//Get the hostname of the machine

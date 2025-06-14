@@ -1,4 +1,4 @@
-package data
+package models
 
 import (
 	"encoding/json"
@@ -7,7 +7,6 @@ import (
 
 // This structure holds the log data that is sent to the api
 type LogData struct {
-	//Id           string        `json:"id"`           //The UUID of the log from the database
 	AgentId      string        `json:"agentId"`      //The UUID of the agent that collected the log data
 	RemoteIP     string        `json:"remoteIp"`     //The IP address of the sender of the request
 	Timestamp    int64         `json:"timestamp"`    //Timestamp when the request was received

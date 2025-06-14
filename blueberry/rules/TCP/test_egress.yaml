@@ -1,0 +1,12 @@
+id: tcp_test_egress
+
+info:
+  name: TCP test
+  description: Tests the match in the tcp message
+  severity: low
+  classification: lfi
+  action: drop
+
+tcp:
+  - direction: egress
+    match: test

@@ -38,6 +38,22 @@ func completeDefaultValues(conf *Configuration) {
 		}
 	}
 
+	//If the default forbidden message is missing for http
+	if conf.RuleConfig.ForbiddenHTTPMessage == "" {
+		conf.RuleConfig.ForbiddenHTTPMessage = `
+		<html>
+			<h1>Forbidden</h1>
+			<p>You don't have access for this resource</p>
+			<p>If you think you did nothing wrong, contact the administrator</p>
+		</html>
+		`
+	}
+
+	//If the default forbidden message is missing for tcp
+	if conf.RuleConfig.ForbiddenTCPMessage == "" {
+		conf.RuleConfig.ForbiddenTCPMessage = "Forbidden\n"
+	}
+
 	//If the operation mode is not specified then it will be waf
 	if conf.OperationMode == "" {
 		conf.OperationMode = "waf"

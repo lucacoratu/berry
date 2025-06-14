@@ -54,13 +54,22 @@ type BodyRule struct {
 	Encodings []string `yaml:"encodings"` //The encodings supported when searching
 }
 
-// Holds all the information about the websocket message
+// Holds all the information about the websocket rule
 type WebsocketRule struct {
 	MessageType int    `yaml:"message_type"` //The type of the websocket message (can be 1 - TextMessage, 2 - BinaryMessage, 8 - CloseMessage, 9 - PingMessage, 10 - PongMessage) RFC 6455, section 11.8.
 	Match       string `yaml:"match"`        //The string to find in message
 	Regex       string `yaml:"regex"`        //The regex used for matching
 	HexMatch    string `yaml:"hexmatch"`     //The hexstring to find in message
 	HexRegex    string `yaml:"hexregex"`     //The regex which contains hex bytes used for matching
+}
+
+// Holds all the information about the tcp rule
+type TCPRule struct {
+	Direction string `yaml:"direction"` //The direction of the communication (can be ingress or egress), ingress for client -> proxy, egrees for proxy -> client
+	Match     string `yaml:"match"`     //The string to match (case insensitive)
+	Regex     string `yaml:"regex"`     //The regex to match
+	HexMatch  string `yaml:"hexmatch"`  //The hexstring to match in message
+	HexRegex  string `yaml:"hexregex"`  //The regex which contains hex bytes used for matching
 }
 
 // Holds all the information in the request field of the rule YAML file
@@ -86,6 +95,7 @@ type Rule struct {
 	Request   *RequestRule     `yaml:"request"`   //The request matchers
 	Response  *ResponseRule    `yaml:"response"`  //The response matchers
 	Websocket []*WebsocketRule `yaml:"websocket"` //The websocket matchers
+	TCP       []*TCPRule       `yaml:"tcp"`       //The tcp matchers
 }
 
 // Function to read the yaml rule from a reader into the struct

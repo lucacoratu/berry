@@ -10,6 +10,7 @@ import (
 
 	"blueberry/internal/config"
 	"blueberry/internal/logging"
+	"blueberry/internal/models"
 	data "blueberry/internal/models"
 )
 
@@ -280,6 +281,40 @@ func CheckRule(rule Rule, logger logging.ILogger) error {
 		}
 	}
 
+	//Check the websocket regexes
+	if rule.Websocket != nil {
+		for _, wsRule := range rule.Websocket {
+			if _, err := regexp.Compile(wsRule.Regex); err != nil {
+				return errors.New("cannot compile regex for websocket match, " + err.Error())
+			}
+			if _, err := regexp.Compile(wsRule.HexRegex); err != nil {
+				return errors.New("cannot compile hexregex for websocket, " + err.Error())
+			}
+		}
+	}
+
+	//Check the tcp regexes
+	if rule.TCP != nil {
+		for _, tcpRule := range rule.TCP {
+			if _, err := regexp.Compile(tcpRule.Regex); err != nil {
+				return errors.New("cannot compile regex for tcp match, " + err.Error())
+			}
+
+			if _, err := regexp.Compile(tcpRule.HexRegex); err != nil {
+				return errors.New("cannot compile hexregex for tcp match, " + err.Error())
+			}
+		}
+	}
+
+	//Check the tcp direction
+	if rule.TCP != nil {
+		for _, tcpRule := range rule.TCP {
+			if tcpRule.Direction != "ingress" && tcpRule.Direction != "egress" {
+				return errors.New("tcp rule direction can be ingress or egress")
+			}
+		}
+	}
+
 	//Check all the encodings fields
 	if err := CheckEncodingSubfields(rule, logger); err != nil {
 		return errors.New("subfield contains invalid encoding, " + err.Error())
@@ -410,4 +445,27 @@ func GetRuleAction(rules []Rule, ruleId string) string {
 	}
 
 	return ""
+}
+
+// Get the verdict based on the findings
+// @param rules - the list of rules loaded from disk
+// @param defaultAction - the default action specified in the rules config
+// @param findings - the list of rule findings
+func GetVerdictBasedOnFindings(rules []Rule, defaultAction string, findings []*models.RuleFindingData) string {
+	//Loop through the findings
+	for _, finding := range findings {
+		//Get the rule action
+		ruleAction := GetRuleAction(rules, finding.RuleId)
+		//If the rule action is drop then the verdict is drop
+		if ruleAction == "drop" {
+			return "drop"
+		}
+
+		//if the rule action is not specified and the default action from config is drop then verdict is drop
+		if ruleAction == "" && defaultAction == "drop" {
+			return "drop"
+		}
+	}
+
+	return "allow"
 }

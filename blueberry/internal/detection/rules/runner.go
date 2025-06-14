@@ -16,7 +16,7 @@ import (
 
 	"blueberry/internal/config"
 	"blueberry/internal/logging"
-	data "blueberry/internal/models"
+	"blueberry/internal/models"
 	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
 
@@ -310,9 +310,9 @@ func (rl *RuleRunner) checkBody(body string, bodyRule []*BodyRule) ([]string, []
 // Run all the rules on the request
 // @param r - the http request to operate on
 // Returns a list of findings or an error if something occured
-func (rl *RuleRunner) RunRulesOnRequest(r *http.Request) ([]*data.RuleFindingData, error) {
+func (rl *RuleRunner) RunRulesOnRequest(r *http.Request) ([]*models.RuleFindingData, error) {
 	//Create the list which will hold all the matches from all the rules for the request
-	findings := make([]*data.RuleFindingData, 0)
+	findings := make([]*models.RuleFindingData, 0)
 
 	//Check if the rules are nil
 	if rl.rules == nil {
@@ -378,7 +378,7 @@ func (rl *RuleRunner) RunRulesOnRequest(r *http.Request) ([]*data.RuleFindingDat
 				continue
 			}
 
-			findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
+			findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
 		}
 		//Check the body of the request
 		bodyData, err = io.ReadAll(r.Body)
@@ -391,16 +391,16 @@ func (rl *RuleRunner) RunRulesOnRequest(r *http.Request) ([]*data.RuleFindingDat
 			matches, hashMatches, _ := rl.checkBody(string(bodyData), rule.Request.Body)
 			//Add the matches to the list of findings
 			for _, match := range matches {
-				findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
+				findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
 			}
 			//Add the hash matches to the list of matches
 			for _, hashMatch := range hashMatches {
-				findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Line: -1, LineIndex: -1, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: "", MatchedBodyHash: hashMatch.BodyHash, MatchedBodyHashAlg: hashMatch.BodyHashAlgorithm, Length: int64(len(hashMatch.BodyHash))})
+				findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Line: -1, LineIndex: -1, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: "", MatchedBodyHash: hashMatch.BodyHash, MatchedBodyHashAlg: hashMatch.BodyHashAlgorithm, Length: int64(len(hashMatch.BodyHash))})
 			}
 		}
 
 		//Check if the rule has at least high severity
-		if ConvertSeverityStringToInteger(rule.Info.Severity) >= data.HIGH {
+		if ConvertSeverityStringToInteger(rule.Info.Severity) >= models.HIGH {
 			//Send an alert to the API via WebSocket
 			if rl.apiWsConn != nil {
 				err := rl.apiWsConn.SendRuleDetectionAlert(websocket.RuleDetectionAlert{AgentId: rl.configuration.UUID, RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: rule.Info.Severity, Timestamp: time.Now().Unix()})
@@ -443,9 +443,9 @@ func (rl *RuleRunner) RunRulesOnRequest(r *http.Request) ([]*data.RuleFindingDat
 // Run all the rules on the response
 // @param r - the http response to operate on
 // Returns a list of findings or an error if something occured
-func (rl *RuleRunner) RunRulesOnResponse(r *http.Response) ([]*data.RuleFindingData, error) {
+func (rl *RuleRunner) RunRulesOnResponse(r *http.Response) ([]*models.RuleFindingData, error) {
 	//Create the list which will hold all the matches from all the rules for the request
-	findings := make([]*data.RuleFindingData, 0)
+	findings := make([]*models.RuleFindingData, 0)
 
 	//Check if the rules are nil
 	if rl.rules == nil {
@@ -466,7 +466,7 @@ func (rl *RuleRunner) RunRulesOnResponse(r *http.Response) ([]*data.RuleFindingD
 
 		//Append matches to the list of findings
 		for _, match := range allMatches {
-			findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
+			findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
 		}
 
 		//Check the body of the request
@@ -480,11 +480,11 @@ func (rl *RuleRunner) RunRulesOnResponse(r *http.Response) ([]*data.RuleFindingD
 			matches, hashMatches, _ := rl.checkBody(string(bodyData), rule.Response.Body)
 			//Add the matches to the list of findings
 			for _, match := range matches {
-				findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
+				findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match))})
 			}
 			//Add the hash matches to the list of matches
 			for _, hashMatch := range hashMatches {
-				findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Line: -1, LineIndex: -1, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: "", MatchedBodyHash: hashMatch.BodyHash, MatchedBodyHashAlg: hashMatch.BodyHashAlgorithm, Length: int64(len(hashMatch.BodyHash))})
+				findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Line: -1, LineIndex: -1, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: "", MatchedBodyHash: hashMatch.BodyHash, MatchedBodyHashAlg: hashMatch.BodyHashAlgorithm, Length: int64(len(hashMatch.BodyHash))})
 			}
 		}
 	}
@@ -559,9 +559,9 @@ func (rl *RuleRunner) searchHex(value []byte, mode *RuleHexSearchMod) []string {
 }
 
 // Run the rules on the websocket message
-func (rl *RuleRunner) RunRulesOnWebsocketMessage(messageType int, messageText []byte) ([]*data.RuleFindingData, error) {
+func (rl *RuleRunner) RunRulesOnWebsocketMessage(messageType int, messageText []byte) ([]*models.RuleFindingData, error) {
 	//Create the list which will hold all the matches from all the rules for the request
-	findings := make([]*data.RuleFindingData, 0)
+	findings := make([]*models.RuleFindingData, 0)
 
 	//Check if the rules are nil
 	if rl.rules == nil {
@@ -608,7 +608,65 @@ func (rl *RuleRunner) RunRulesOnWebsocketMessage(messageType int, messageText []
 				continue
 			}
 
-			findings = append(findings, &data.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match)), Line: -1, LineIndex: -1})
+			findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match)), Line: -1, LineIndex: -1})
+		}
+	}
+
+	return findings, nil
+}
+
+// Applies the rules which have the tcp field on the message based on the direction
+// The direction can either be ingress or egress
+func (rl *RuleRunner) ApplyRulesOnTCPMessage(direction string, messageText []byte) ([]*models.RuleFindingData, error) {
+	//Create the list which will hold all the matches from all the rules for the request
+	findings := make([]*models.RuleFindingData, 0)
+
+	//Check if the rules are nil
+	if rl.rules == nil {
+		return findings, nil
+	}
+
+	for _, rule := range rl.rules {
+		//Create the list of all matches
+		allMatches := make([]string, 0)
+
+		//Check if the tcp field exists in the rule
+		if rule.TCP == nil {
+			continue
+		}
+
+		for _, tcpRule := range rule.TCP {
+			//Check if the direction is ingress
+			if tcpRule.Direction == direction {
+				//if the match or regex field exists
+				if tcpRule.Match != "" || tcpRule.Regex != "" {
+					matches := rl.search(string(messageText), &RuleSearchMode{Match: tcpRule.Match, Regex: tcpRule.Regex, Encodings: nil})
+					allMatches = append(allMatches, matches...)
+				}
+				//if the hexmatch or hexregex field exists
+				if tcpRule.HexMatch != "" || tcpRule.HexRegex != "" {
+					matches := rl.search(string(messageText), &RuleSearchMode{Match: tcpRule.HexMatch, Regex: tcpRule.HexRegex, Encodings: nil})
+					allMatches = append(allMatches, matches...)
+				}
+			}
+		}
+
+		//Append matches to the list of findings
+		for _, match := range allMatches {
+			findingFound := false
+			//Check if the finding is not the classification is already made for this request
+			for _, finding := range findings {
+				if finding.RuleId == rule.Id {
+					findingFound = true
+					break
+				}
+			}
+
+			if findingFound {
+				continue
+			}
+
+			findings = append(findings, &models.RuleFindingData{RuleId: rule.Id, RuleName: rule.Info.Name, RuleDescription: rule.Info.Description, Classification: rule.Info.Classification, Severity: ConvertSeverityStringToInteger(rule.Info.Severity), MatchedString: match, Length: int64(len(match)), Line: -1, LineIndex: -1})
 		}
 	}
 
