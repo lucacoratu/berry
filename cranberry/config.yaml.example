@@ -1,0 +1,20 @@
+logging:
+  logger_type: console
+
+db:
+  sql:
+    username: root
+    password: root
+    ip: 127.0.0.1
+    port: 3306
+    database: cranberry
+  opensearch:
+    username: admin
+    password: admin
+    addresses:
+      - https://127.0.0.1:9200
+
+lprotocol: http
+laddress: 0.0.0.0
+lport: 8080
+operation_mode: waf
