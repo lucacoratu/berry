@@ -22,6 +22,6 @@ rules:
 logging:
   logger_type: console
 
-cranberry_url: http://127.0.0.1:9000
+cranberry_url: http://127.0.0.1:9000/api/v1
 uuid: ''
 operation_mode: waf

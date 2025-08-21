@@ -29,3 +29,18 @@ func (ld *LogData) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(ld)
 }
+
+type ExtendedLogData struct {
+	LogData
+	//Fields for HTTP type
+	HTTPMethod          string `json:"httpMethod"`
+	HTTPRequestVersion  string `json:"httpRequestVersion"`
+	HTTPRequestURL      string `json:"httpRequestURL"`
+	HTTPResponseVersion string `json:"httpResponseVersion"`
+	HTTPResponseCode    string `json:"httpResponseCode"`
+}
+
+type ViewExtendedLogData struct {
+	Id string `json:"id"` //This field is the id which will be retrieved from opensearch
+	ExtendedLogData
+}

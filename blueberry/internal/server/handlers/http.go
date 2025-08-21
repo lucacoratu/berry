@@ -4,15 +4,19 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
 	ws_gorilla "github.com/gorilla/websocket"
 
 	"blueberry/internal/config"
+	"blueberry/internal/cranberry"
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
 	"blueberry/internal/logging"
+	"blueberry/internal/models"
+	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
 )
 
@@ -132,6 +136,13 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 		return
 	}
 
+	//Initialize the cranberry client
+	cClient := cranberry.NewCranberryClient(bHandler.logger, bHandler.configuration)
+
+	//Create the log data
+	remoteIp, _, _ := net.SplitHostPort(r.RemoteAddr)
+	logData := models.LogData{AgentId: bHandler.configuration.UUID, RemoteIP: remoteIp, Timestamp: time.Now().Unix(), Type: "http"}
+
 	//Log the endpoint where the request was made
 	bHandler.logger.Info("Received", r.Method, "request on", r.URL.Path)
 
@@ -148,15 +159,35 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	//Log the request rule findings
 	bHandler.logger.Debug("Request rule findings", requestRuleFindings)
 
+	//Add the request rule findings to the log data
+	logData.RequestFindings = requestRuleFindings
+
 	//Get the verdict based on the findings
 	verdict := rules.GetVerdictBasedOnFindings(bHandler.rules, bHandler.configuration.RuleConfig.DefaultAction, requestRuleFindings)
+
+	//Add the request findings and the request raw dump
+	b64Req, err := utils.ConvertRequestToB64(r)
+	if err != nil {
+		bHandler.logger.Error("Failed to dump request to raw data and convert to base64", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("Internal error"))
+		return
+	}
+
+	logData.Request = b64Req
 
 	//If the verdict is drop then send the forbidden page back to the client
 	if verdict == "drop" {
 		rw.WriteHeader(http.StatusForbidden)
 		rw.Write([]byte(bHandler.configuration.RuleConfig.ForbiddenHTTPMessage))
-
-		//TODO...Send the log to cranberry
+		logData.Verdict = "drop"
+		newResp, err := utils.GetEncodedForbiddenMessage(bHandler.configuration.RuleConfig.ForbiddenHTTPMessage)
+		if err != nil {
+			bHandler.logger.Warning("Failed to get base64 encoded response", err.Error(), "will default to empty response")
+		} else {
+			logData.Response = newResp
+		}
+		cClient.SendLog(logData)
 		return
 	}
 
@@ -164,6 +195,7 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	response, err := bHandler.forwardRequest(r)
 	if err != nil {
 		bHandler.logger.Error(err.Error())
+		//TO DO...Send a error message back to the client
 		return
 	}
 
@@ -173,17 +205,36 @@ func (bHandler *BlueberryHTTPHandler) HandleRequest(rw http.ResponseWriter, r *h
 	//Log the rules response findings
 	bHandler.logger.Debug("Response rule findings", responseRuleFindings)
 
+	//Add the response findings to the list response findings
+	logData.ResponseFindings = responseRuleFindings
+
 	//Get the verdict for the response
 	verdictResponse := rules.GetVerdictBasedOnFindings(bHandler.rules, bHandler.configuration.RuleConfig.DefaultAction, responseRuleFindings)
+
+	//Add the response to the log data
+	b64Resp, err := utils.ConvertResponseToB64(response)
+	if err != nil {
+		bHandler.logger.Error("Failed to dump response to raw data and convert to base64", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		rw.Write([]byte("Internal error"))
+		return
+	}
+
+	logData.Response = b64Resp
 
 	//If the verdict is drop then send the forbidden http message
 	if verdictResponse == "drop" {
 		rw.WriteHeader(http.StatusForbidden)
 		rw.Write([]byte(bHandler.configuration.RuleConfig.ForbiddenHTTPMessage))
-
-		//TODO...Send log to cranberry
+		logData.Verdict = "drop"
+		//TODO...Add the forbidden response
+		cClient.SendLog(logData)
 		return
 	}
+
+	//This is for the case the request is legitimate
+	logData.Verdict = "allow"
+	cClient.SendLog(logData)
 
 	//Send the response from the web server back to the client
 	bHandler.forwardResponse(rw, response)

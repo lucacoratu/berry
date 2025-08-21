@@ -3,6 +3,7 @@ package database
 import (
 	"cranberry/internal/config"
 	"cranberry/internal/logging"
+	"database/sql"
 	"fmt"
 
 	"gorm.io/driver/mysql"
@@ -64,4 +65,10 @@ func (mc *MysqlConnection) Init() error {
 	}
 
 	return nil
+}
+
+func (mc *MysqlConnection) InsertAgent(uuid string) error {
+	agent := Proxy{UUID: sql.NullString{String: uuid, Valid: true}}
+	result := mc.db.Create(&agent)
+	return result.Error
 }

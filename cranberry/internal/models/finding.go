@@ -30,8 +30,8 @@ type FindingData struct {
 
 // Rule findings found by agent, one for request, one for response
 type Finding struct {
-	Request  []*FindingData `json:"request"`  //The rule findings for the request
-	Response []*FindingData `json:"response"` //The rule findings for the response
+	Request  *FindingData `json:"request"`  //The rule findings for the request
+	Response *FindingData `json:"response"` //The rule findings for the response
 }
 
 // Convert rule finding to JSON

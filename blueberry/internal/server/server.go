@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"blueberry/internal/config"
+	"blueberry/internal/cranberry"
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
 	"blueberry/internal/logging"
@@ -20,6 +21,7 @@ import (
 	"blueberry/internal/websocket"
 
 	"github.com/gorilla/mux"
+	"gopkg.in/yaml.v2"
 )
 
 // Proxy server is the abstraction used by the Blueberry server to manage the proxy instances
@@ -122,69 +124,56 @@ func (server *BlueberryServer) Init() error {
 	}
 
 	var apiWsConnection *websocket.APIWebSocketConnection = nil
-	// if utils.CheckAPIConnection(server.apiBaseURL) {
-	// 	apiHandler := api.NewAPIHandler(server.logger, server.configuration)
+	if utils.CheckAPIConnection(server.apiBaseURL) {
+		cClient := cranberry.NewCranberryClient(server.logger, server.configuration)
 
-	// 	//Check if the UUID was set inside the configuration
-	// 	if server.configuration.UUID == "" {
-	// 		//Collect information of the operating system
-	// 		machineInfo, err := utils.GetMachineInfo()
-	// 		if err != nil {
-	// 			server.logger.Error(err.Error())
-	// 			return err
-	// 		}
+		//Check if the UUID was set inside the configuration
+		if server.configuration.UUID == "" {
+			//Send the information to the collector
+			uuid, err := cClient.RegisterAgent()
+			if err != nil {
+				server.logger.Error("Could not register this agent on cranberry", err.Error())
+				return err
+			}
 
-	// 		//Log the machine info extracted
-	// 		server.logger.Debug(machineInfo)
+			server.logger.Info("UUID received", uuid)
+			//Save the UUID into the configuration structure and write the config JSON to disk
+			server.configuration.UUID = uuid
+			file, err := os.OpenFile(server.configFile, os.O_WRONLY|os.O_TRUNC, 0644)
+			//Check if an error occured when trying to open the configuration file to update it
+			if err != nil {
+				server.logger.Error("Could not save the configuration file to disk, failed to open configuration file for writing, UUID not saved", err.Error())
+			} else {
+				newConfigContent, err := yaml.Marshal(server.configuration)
+				//Check if an error occured when marshaling the json for configuration
+				if err != nil {
+					server.logger.Error("Could not save the configuration file to disk, UUID not saved", err.Error())
+				} else {
+					//Write the new configuration to file
+					_, err := file.Write(newConfigContent)
+					//Check if an error occured when writing the new configuration
+					if err != nil {
+						server.logger.Error("Could not write the new configuration file, UUID not saved", err.Error())
+					} else {
+						server.logger.Info("Updated the configuration file to cantain the received UUID from the API")
+					}
+				}
+			}
+		}
 
-	// 		//Populate information about this server
-	// 		serverInfo := data.serverInformation{Protocol: server.configuration.ListeningProtocol, IPAddress: server.configuration.ListeningAddress, Port: server.configuration.ListeningPort, WebServerProtocol: server.configuration.ForwardServerProtocol, WebServerIP: server.configuration.ForwardServerAddress, WebServerPort: server.configuration.ForwardServerPort, MachineInfo: machineInfo}
+		// 	//Connect to the API websocket
+		// 	apiWsURL := "ws://" + server.configuration.APIIpAddress + ":" + server.configuration.APIPort + "/api/v1/servers/" + server.configuration.UUID + "/ws"
+		// 	apiWsConnection = websocket.NewAPIWebSocketConnection(server.logger, apiWsURL, server.configuration)
+		// 	_, err = apiWsConnection.Connect()
+		// 	//Check if an error occured when connection to the API ws endpoint for the server
+		// 	if err != nil {
+		// 		server.logger.Error("Cannot connect to the API ws endpoint")
+		// 		return errors.New("could not connect to the API ws endpoint")
+		// 	}
 
-	// 		//Send the information to the collector
-	// 		uuid, err := apiHandler.Registerserver(server.apiBaseURL, serverInfo)
-	// 		if err != nil {
-	// 			server.logger.Error("Could not register this proxy on the collector", err.Error())
-	// 			return err
-	// 		}
-
-	// 		server.logger.Debug("UUID received", uuid)
-	// 		//Save the UUID into the configuration structure and write the config JSON to disk
-	// 		server.configuration.UUID = uuid
-	// 		file, err := os.OpenFile(server.configFile, os.O_WRONLY|os.O_TRUNC, 0644)
-	// 		//Check if an error occured when trying to open the configuration file to update it
-	// 		if err != nil {
-	// 			server.logger.Error("Could not save the configuration file to disk, failed to open configuration file for writing, UUID not saved", err.Error())
-	// 		} else {
-	// 			newConfigContent, err := json.MarshalIndent(server.configuration, "", "    ")
-	// 			//Check if an error occured when marshaling the json for configuration
-	// 			if err != nil {
-	// 				server.logger.Error("Could not save the configuration file to disk, UUID not saved", err.Error())
-	// 			} else {
-	// 				//Write the new configuration to file
-	// 				_, err := file.Write(newConfigContent)
-	// 				//Check if an error occured when writing the new configuration
-	// 				if err != nil {
-	// 					server.logger.Error("Could not write the new configuration file, UUID not saved", err.Error())
-	// 				} else {
-	// 					server.logger.Info("Updated the configuration file to cantain the received UUID from the API")
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// 	//Connect to the API websocket
-	// 	apiWsURL := "ws://" + server.configuration.APIIpAddress + ":" + server.configuration.APIPort + "/api/v1/servers/" + server.configuration.UUID + "/ws"
-	// 	apiWsConnection = websocket.NewAPIWebSocketConnection(server.logger, apiWsURL, server.configuration)
-	// 	_, err = apiWsConnection.Connect()
-	// 	//Check if an error occured when connection to the API ws endpoint for the server
-	// 	if err != nil {
-	// 		server.logger.Error("Cannot connect to the API ws endpoint")
-	// 		return errors.New("could not connect to the API ws endpoint")
-	// 	}
-
-	// 	//Start waiting for messages from the server
-	// 	go apiWsConnection.Start()
-	// }
+		// 	//Start waiting for messages from the server
+		// 	go apiWsConnection.Start()
+	}
 
 	//Send a test notification
 	//apiWsConnection.SendNotification("Connected to the WS endpoint")

@@ -4,7 +4,10 @@ import (
 	"context"
 	"cranberry/internal/config"
 	"cranberry/internal/logging"
+	"cranberry/internal/models"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -92,7 +95,52 @@ func (osc *OpensearchConnection) Init() error {
 	return nil
 }
 
-// func (osc *OpensearchConnection) InsertLog() error {
-// 	osc.client.Index()
-// 	return nil
-// }
+func (osc *OpensearchConnection) InsertAgentLog(log models.ExtendedLogData) error {
+	logData, err := json.Marshal(log)
+	if err != nil {
+		osc.logger.Error("Failed to marshal log data to JSON", err.Error())
+		return err
+	}
+
+	logDataOS := strings.NewReader(string(logData))
+
+	req := opensearchapi.IndexRequest{
+		Index: "cranberry",
+		Body:  logDataOS,
+	}
+
+	_, err = req.Do(context.Background(), osc.client)
+	if err != nil {
+		osc.logger.Error("Failed to insert log into OpenSearch database", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (osc *OpensearchConnection) GetAgentLogs(uuid string) (models.ViewExtendedLogData, error) {
+	//Prepare the query
+	content := strings.NewReader(fmt.Sprintf(`{
+		"size": 1000,
+		"query": {
+			"multi_match": {
+				"query": "%s",
+				"fields": ["agentId"]
+			}
+		}
+	}`, uuid))
+
+	search := opensearchapi.SearchRequest{
+		Index: []string{"cranberry"},
+		Body:  content,
+	}
+
+	searchResponse, err := search.Do(context.Background(), osc.client)
+	if err != nil {
+		return models.ViewExtendedLogData{}, err
+	}
+
+	osc.logger.Debug(searchResponse.String())
+
+	return models.ViewExtendedLogData{}, nil
+}

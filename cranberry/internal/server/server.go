@@ -76,9 +76,21 @@ func (server *CranberryServer) Init() error {
 
 	//Create the handlers
 	healthcheckHandler := handlers.NewHealthcheckHandler(server.logger, server.configuration)
+	agentsHandler := handlers.NewAgentsHandler(server.logger, server.configuration, server.sqlDb)
+	logsHandler := handlers.NewLogsHandler(server.logger, server.configuration, server.sqlDb, server.osConn)
 
 	//Create the healthcheck route
 	r.HandleFunc("/api/v1/healthcheck", healthcheckHandler.Healthcheck)
+
+	//Create the agent register route
+	r.HandleFunc("/api/v1/agents/register", agentsHandler.RegisterAgent)
+
+	apiPostSubrouter := r.PathPrefix("/api/v1/").Methods("POST").Subrouter()
+	apiGetSubrouter := r.PathPrefix("/api/v1/").Methods("GET").Subrouter()
+
+	//Create the route that will receive logs from an agent
+	apiPostSubrouter.HandleFunc("/agents/{uuid:[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+}/logs", logsHandler.InsertAgentLog)
+	apiGetSubrouter.HandleFunc("/agents/{uuid:[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+}/logs", logsHandler.ViewAgentLogs)
 
 	server.srv = &http.Server{
 		Addr: server.configuration.ListeningAddress + ":" + server.configuration.ListeningPort,

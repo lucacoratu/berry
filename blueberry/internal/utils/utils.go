@@ -1,17 +1,16 @@
 package utils
 
 import (
-	"blueberry/internal/models"
 	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
+	"net/http/httputil"
 	"os"
-	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 
 	b64 "encoding/base64"
@@ -62,7 +61,7 @@ func ReadLinesFromFile(filePath string) ([]string, error) {
 	return lines, nil
 }
 
-// Check connection to the collector
+// Check connection to cranberry
 func CheckAPIConnection(apiBaseURL string) bool {
 	response, err := http.Get(apiBaseURL + "/healthcheck")
 	if err != nil {
@@ -73,45 +72,6 @@ func CheckAPIConnection(apiBaseURL string) bool {
 		return false
 	}
 	return true
-}
-
-// Collects information about the machine
-func GetMachineInfo() (models.MachineInformation, error) {
-	machineInfo := models.MachineInformation{}
-	//Get the operating system
-	machineInfo.OS = runtime.GOOS
-	//Get the hostname of the machine
-	hostname, err := os.Hostname()
-	if err != nil {
-		return machineInfo, errors.New("cannot get the hostname of the machine, " + err.Error())
-	}
-	machineInfo.Hostname = hostname
-	//Get the ip addresses on all network interfaces
-	ifaces, err := net.Interfaces()
-	//Check if an error occured when getting the network interfaces of the machine
-	if err != nil {
-		return machineInfo, errors.New("cannot get the network interfaces of the machine, " + err.Error())
-	}
-
-	//Go through all the network interfaces and add
-	for _, i := range ifaces {
-		addrs, _ := i.Addrs()
-		// handle err
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			// process IP address
-			if !ip.IsLoopback() {
-				machineInfo.IPAddresses = append(machineInfo.IPAddresses, ip.String())
-			}
-		}
-	}
-	return machineInfo, nil
 }
 
 // Dumps the http request as a string
@@ -273,33 +233,25 @@ func FindFindingDataInRawdata(rawData string, searchString string) (int64, int64
 	return -1, -1, nil
 }
 
-func CombineFindings(requestRuleFindings []*models.FindingData, responseRuleFindings []*models.FindingData) []models.Finding {
-	//Add all the findings from all the validators to a list which will be sent to the API
-	allFindings := make([]models.Finding, 0)
-	//Add all request findings
-	for index, finding := range requestRuleFindings {
-		if index < len(responseRuleFindings) {
-			allFindings = append(allFindings, models.Finding{Request: finding, Response: responseRuleFindings[index]})
-		} else {
-			allFindings = append(allFindings, models.Finding{Request: finding, Response: nil})
-		}
-	}
+// Gets the forbidden message base64 encoded
+func GetEncodedForbiddenMessage(forbiddenMessage string) (string, error) {
+	resp := http.Response{}
+	resp.StatusCode = http.StatusForbidden
+	resp.ProtoMajor = 1
+	resp.ProtoMinor = 1
+	resp.Header = http.Header{}
+	resp.Header.Add("Content-Length", strconv.Itoa(len(forbiddenMessage)))
+	resp.Header.Add("Content-Type", "text/html; charset=utf-8")
+	resp.Body = io.NopCloser(strings.NewReader(forbiddenMessage))
 
-	//Add the response findings
-	for index, finding := range responseRuleFindings {
-		//If the index is less than the length of the all findings list then complete the index structure with the response findings
-		if index < len(allFindings) {
-			allFindings[index].Response = finding
-		} else {
-			//Otherwise add a new structure to the list of all findings which will have the Request empty
-			allFindings = append(allFindings, models.Finding{Request: nil, Response: finding})
-		}
+	rawResp, err := httputil.DumpResponse(&resp, true)
+	if err != nil {
+		return "", err
 	}
-
-	return allFindings
+	return b64.StdEncoding.EncodeToString(rawResp), nil
 }
 
-// Converts the response to raw string then base64 encodes it
+// Converts the request to raw string then base64 encodes it
 func ConvertRequestToB64(req *http.Request) (string, error) {
 	//Dump the HTTP request to raw string
 	rawRequest, err := DumpHTTPRequest(req)
@@ -311,6 +263,20 @@ func ConvertRequestToB64(req *http.Request) (string, error) {
 	b64RawRequest := b64.StdEncoding.EncodeToString(rawRequest)
 	//Return the base64 string of the request and the response
 	return b64RawRequest, nil
+}
+
+// Converts the response to raw string then base64 encodes it
+func ConvertResponseToB64(resp *http.Response) (string, error) {
+	//Dump the HTTP request to raw string
+	rawResp, err := DumpHTTPResponse(resp)
+	//Check if an error occured when dumping the request as raw string
+	if err != nil {
+		return "", err
+	}
+	//Convert raw request to base64
+	b64RawResp := b64.StdEncoding.EncodeToString(rawResp)
+	//Return the base64 string of the request and the response
+	return b64RawResp, nil
 }
 
 // Converts the request and the response to raw string then base64 encodes both of them

@@ -16,5 +16,5 @@ db:
 
 lprotocol: http
 laddress: 0.0.0.0
-lport: 8080
+lport: 9000
 operation_mode: waf
