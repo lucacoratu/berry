@@ -21,6 +21,7 @@ import {
     AvatarImage,
 } from "@/components/ui/avatar";
 import React from "react";
+import Image from "next/image";
 
 export default function Navbar() {
     const [open, setOpen] = React.useState(false);
@@ -41,7 +42,8 @@ export default function Navbar() {
         <header className="sticky top-0 z-30 flex h-12 items-center gap-4 border-b bg-background px-4 sm:static sm:h-8 sm:border-0 sm:bg-transparent sm:px-6">
             {/* <NavbarSheet /> */}
 
-            <h3 className="font-black mr-4 hidden md:flex"></h3>
+            <Image width={40} height={40} src={"/strawberry.svg"} alt=""></Image>
+            <h3 className="font-black mr-4 hidden md:flex">STRAWBERRY</h3>
 
             {/* <BreadcrumbNavbar /> */}
 

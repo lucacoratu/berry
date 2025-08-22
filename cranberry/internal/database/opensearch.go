@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -23,6 +24,53 @@ type OpensearchConnection struct {
 
 func NewOpensearchConnection(logger logging.ILogger, configuration config.Configuration) *OpensearchConnection {
 	return &OpensearchConnection{logger: logger, configuration: configuration}
+}
+
+type ShardsResponse struct {
+	Total      uint `json:"total"`
+	Successful uint `json:"successful"`
+	Skipped    uint `json:"skipped"`
+	Failed     uint `json:"failed"`
+}
+
+type CountResponse struct {
+	Count  uint           `json:"count"`
+	Shards ShardsResponse `json:"_shards"`
+}
+
+func (cr *CountResponse) FromJSON(r io.Reader) error {
+	d := json.NewDecoder(r)
+	return d.Decode(cr)
+}
+
+type HitsTotalResponse struct {
+	Value    uint   `json:"value"`
+	Relation string `json:"relation"`
+}
+
+type InternalHitsResponse[T any] struct {
+	Index  string  `json:"_index"`
+	Id     string  `json:"_id"`
+	Score  float32 `json:"_score"`
+	Source T       `json:"_source"`
+}
+
+type HitsResponse[T any] struct {
+	Total    HitsTotalResponse         `json:"total"`
+	MaxScore float32                   `json:"max_score"`
+	Hits     []InternalHitsResponse[T] `json:"hits"`
+}
+
+type SearchResponse[T any] struct {
+	Took     uint            `json:"took"`
+	TimedOut bool            `json:"timed_out"`
+	Shards   ShardsResponse  `json:"_shards"`
+	Hits     HitsResponse[T] `json:"hits"`
+}
+
+func (sr *SearchResponse[T]) FromJSON(r io.Reader) error {
+	d := json.NewDecoder(r)
+	return d.Decode(sr)
 }
 
 // Create the index which will be used by cranberry
@@ -118,6 +166,42 @@ func (osc *OpensearchConnection) InsertAgentLog(log models.ExtendedLogData) erro
 	return nil
 }
 
+func (osc *OpensearchConnection) GetLogs() (models.ViewExtendedLogsData, error) {
+	//Prepare the query
+	content := strings.NewReader(`{
+		"size": 1000,
+		"query": {
+			"match_all": {}
+		}
+	}`)
+
+	search := opensearchapi.SearchRequest{
+		Index: []string{"cranberry"},
+		Body:  content,
+	}
+
+	searchResponse, err := search.Do(context.Background(), osc.client)
+	if err != nil {
+		return []models.ViewExtendedLogData{}, err
+	}
+
+	logsResp := SearchResponse[models.ViewExtendedLogData]{}
+	err = logsResp.FromJSON(searchResponse.Body)
+
+	if err != nil {
+		return []models.ViewExtendedLogData{}, err
+	}
+
+	logs := []models.ViewExtendedLogData{}
+	for _, hit := range logsResp.Hits.Hits {
+		log := models.ViewExtendedLogData{ExtendedLogData: hit.Source.ExtendedLogData}
+		log.Id = hit.Id
+		logs = append(logs, log)
+	}
+
+	return logs, nil
+}
+
 func (osc *OpensearchConnection) GetAgentLogs(uuid string) (models.ViewExtendedLogData, error) {
 	//Prepare the query
 	content := strings.NewReader(fmt.Sprintf(`{
@@ -143,4 +227,34 @@ func (osc *OpensearchConnection) GetAgentLogs(uuid string) (models.ViewExtendedL
 	osc.logger.Debug(searchResponse.String())
 
 	return models.ViewExtendedLogData{}, nil
+}
+
+func (osc *OpensearchConnection) GetAgentLogsCount(uuid string) (uint, error) {
+	//Prepare the query
+	content := strings.NewReader(fmt.Sprintf(`{
+		"query": {
+			"multi_match": {
+				"query": "%s",
+				"fields": ["agentId"]
+			}
+		}
+	}`, uuid))
+
+	countReq := opensearchapi.CountRequest{
+		Index: []string{"cranberry"},
+		Body:  content,
+	}
+
+	res, err := countReq.Do(context.Background(), osc.client)
+	if err != nil {
+		return 0, err
+	}
+
+	countResp := CountResponse{}
+	err = countResp.FromJSON(res.Body)
+	if err != nil {
+		return 0, err
+	}
+
+	return countResp.Count, nil
 }

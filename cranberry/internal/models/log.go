@@ -44,3 +44,10 @@ type ViewExtendedLogData struct {
 	Id string `json:"id"` //This field is the id which will be retrieved from opensearch
 	ExtendedLogData
 }
+
+type ViewExtendedLogsData []ViewExtendedLogData
+
+func (veld *ViewExtendedLogsData) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(veld)
+}

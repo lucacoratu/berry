@@ -72,3 +72,9 @@ func (mc *MysqlConnection) InsertAgent(uuid string) error {
 	result := mc.db.Create(&agent)
 	return result.Error
 }
+
+func (mc *MysqlConnection) GetAgents() ([]Proxy, error) {
+	var agents []Proxy
+	result := mc.db.Find(&agents)
+	return agents, result.Error
+}

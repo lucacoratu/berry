@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-export default async function UsersPage() {
+export default async function LogsPage() {
     return (
         <p>logs</p>
     )

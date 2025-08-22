@@ -116,6 +116,19 @@ func (lh *LogsHandler) InsertAgentLog(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
+func (lh *LogsHandler) ViewAllLogs(rw http.ResponseWriter, r *http.Request) {
+	logs, err := lh.osConn.GetLogs()
+	if err != nil {
+		lh.logger.Error("Failed to get logs from OpenSearch database", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		cApiErr := models.CranberryAPIError{Detail: "Failed to get logs"}
+		cApiErr.ToJSON(rw)
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	logs.ToJSON(rw)
+}
+
 func (lh *LogsHandler) ViewAgentLogs(rw http.ResponseWriter, r *http.Request) {
 	//Get the agent uuid from the URL
 	vars := mux.Vars(r)
