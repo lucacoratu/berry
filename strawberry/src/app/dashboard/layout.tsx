@@ -10,7 +10,7 @@ export default function DashboardLayout({
             <div className="sticky top-0 z-30 flex flex-col sm:gap-4 sm:py-4 bg-background border-b border-secondary">
               <Navbar/>
             </div>
-            <div className="relative sm:py-4 sm:pl-14">
+            <div className="relative sm:py-4 sm:px-4">
                 {children}
             </div>
         </main>
