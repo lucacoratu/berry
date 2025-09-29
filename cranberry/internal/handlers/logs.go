@@ -139,6 +139,7 @@ func (lh *LogsHandler) ViewLog(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		cApiErr := models.CranberryAPIError{Detail: "Failed to get log"}
 		cApiErr.ToJSON(rw)
+		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
@@ -161,4 +162,20 @@ func (lh *LogsHandler) ViewAgentLogs(rw http.ResponseWriter, r *http.Request) {
 	lh.osConn.GetAgentLogs(uuid)
 
 	rw.WriteHeader(http.StatusOK)
+}
+
+// Statistics
+func (lh *LogsHandler) ViewMethodsCount(rw http.ResponseWriter, r *http.Request) {
+	stats, err := lh.osConn.GetMethodsCount()
+	if err != nil {
+		//Send an error message
+		rw.WriteHeader(http.StatusBadRequest)
+		apiErr := models.CranberryAPIError{Detail: "Failed to get statistics for HTTP methods"}
+		apiErr.ToJSON(rw)
+		return
+	}
+
+	//Send the statistics to the user
+	rw.WriteHeader(http.StatusOK)
+	stats.ToJSON(rw)
 }

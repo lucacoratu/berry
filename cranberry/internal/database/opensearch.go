@@ -187,7 +187,14 @@ func (osc *OpensearchConnection) GetLogs() (models.ViewExtendedLogsData, error) 
 		"size": 1000,
 		"query": {
 			"match_all": {}
-		}
+		},
+		"sort": [
+			{
+				"timestamp": {
+					"order": "desc"
+				}
+			}
+		]
 	}`)
 
 	search := opensearchapi.SearchRequest{
@@ -199,6 +206,7 @@ func (osc *OpensearchConnection) GetLogs() (models.ViewExtendedLogsData, error) 
 	if err != nil {
 		return []models.ViewExtendedLogData{}, err
 	}
+	defer searchResponse.Body.Close()
 
 	logsResp := SearchResponse[models.ViewExtendedLogData]{}
 	err = logsResp.FromJSON(searchResponse.Body)
@@ -264,6 +272,7 @@ func (osc *OpensearchConnection) GetAgentLogsCount(uuid string) (uint, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer res.Body.Close()
 
 	countResp := CountResponse{}
 	err = countResp.FromJSON(res.Body)
@@ -280,17 +289,85 @@ func (osc *OpensearchConnection) GetLog(id string) (models.ViewExtendedLogData, 
 		DocumentID: id,
 	}
 
-	searchResponse, err := search.Do(context.Background(), osc.client)
+	getResponse, err := search.Do(context.Background(), osc.client)
 	if err != nil {
 		return models.ViewExtendedLogData{}, err
 	}
+	defer getResponse.Body.Close()
 
 	logResp := GetResponse[models.ViewExtendedLogData]{}
-	err = logResp.FromJSON(searchResponse.Body)
+	err = logResp.FromJSON(getResponse.Body)
 
 	if err != nil {
 		return models.ViewExtendedLogData{}, err
 	}
 
 	return logResp.Source, nil
+}
+
+// HTTP Method Statistics
+func (osc *OpensearchConnection) GetMethodsCount() (models.HTTPMethodStatistics, error) {
+	query := `{
+		"size": 0,
+		"aggs": {
+			"methods": {
+				"terms": {
+					"field": "httpMethod.keyword"
+				}
+			}
+		}
+	}`
+
+	// Execute the search
+	req := opensearchapi.SearchRequest{
+		Index: []string{"cranberry"}, // replace with your index
+		Body:  strings.NewReader(query),
+	}
+
+	res, err := req.Do(context.Background(), osc.client)
+	if err != nil {
+		return models.HTTPMethodStatistics{}, err
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return models.HTTPMethodStatistics{}, err
+	}
+
+	// Parse the response
+	var r map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		return models.HTTPMethodStatistics{}, err
+	}
+
+	stats := models.HTTPMethodStatistics{}
+
+	// Extract aggregation buckets
+	buckets := r["aggregations"].(map[string]interface{})["methods"].(map[string]interface{})["buckets"].([]interface{})
+	for _, b := range buckets {
+		bucket := b.(map[string]interface{})
+
+		switch bucket["key"] {
+		case "GET":
+			stats.GET = int64(bucket["doc_count"].(float64))
+		case "HEAD":
+			stats.HEAD = int64(bucket["doc_count"].(float64))
+		case "OPTIONS":
+			stats.OPTIONS = int64(bucket["doc_count"].(float64))
+		case "TRACE":
+			stats.TRACE = int64(bucket["doc_count"].(float64))
+		case "PUT":
+			stats.PUT = int64(bucket["doc_count"].(float64))
+		case "DELETE":
+			stats.DELETE = int64(bucket["doc_count"].(float64))
+		case "POST":
+			stats.POST = int64(bucket["doc_count"].(float64))
+		case "PATCH":
+			stats.PATCH = int64(bucket["doc_count"].(float64))
+		case "CONNECT":
+			stats.CONNECT = int64(bucket["doc_count"].(float64))
+		}
+	}
+
+	return stats, nil
 }
