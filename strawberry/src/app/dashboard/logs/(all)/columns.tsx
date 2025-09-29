@@ -149,6 +149,12 @@ export const columns: ColumnDef<ViewExtendedLogData>[] = [
         }
     },
     {
+        accessorKey: "verdict",
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Verdict" />
+        ),
+    },
+    {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {

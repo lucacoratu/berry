@@ -2,9 +2,9 @@ type FindingData = {
     ruleId: string
     ruleName: string,
     ruleDescription: string,
-    line: string,
-    lineIndex: string,
-    length: string,
+    line: number,
+    lineIndex: number,
+    length: number,
     matchedString: string,
     matchedBodyHash: string,
     matchedBodyHashAlg: string,

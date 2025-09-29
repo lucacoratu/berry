@@ -5,8 +5,8 @@ import { columns } from "./columns";
 async function GetLogs(): Promise<ViewExtendedLogData[]> {
     const URL: string = `${constants.apiBaseURL}/logs`;
     const response: Response = await fetch(URL);
-    const agents: ViewExtendedLogData[] = await response.json();
-    return agents;
+    const logs: ViewExtendedLogData[] = await response.json();
+    return logs;
 }
 
 export default async function LogsPage() {

@@ -73,6 +73,21 @@ func (sr *SearchResponse[T]) FromJSON(r io.Reader) error {
 	return d.Decode(sr)
 }
 
+type GetResponse[T any] struct {
+	Index       string `json:"_index"`
+	Id          string `json:"_id"`
+	Version     int32  `json:"_version"`
+	SequenceNo  int32  `json:"_seq_no"`
+	PrimaryTerm int32  `json:"_primary_term"`
+	Found       bool   `json:"found"`
+	Source      T      `json:"_source"`
+}
+
+func (gr *GetResponse[T]) FromJSON(r io.Reader) error {
+	d := json.NewDecoder(r)
+	return d.Decode(gr)
+}
+
 // Create the index which will be used by cranberry
 func (osc *OpensearchConnection) createIndex() error {
 	ctx := context.Background()
@@ -257,4 +272,25 @@ func (osc *OpensearchConnection) GetAgentLogsCount(uuid string) (uint, error) {
 	}
 
 	return countResp.Count, nil
+}
+
+func (osc *OpensearchConnection) GetLog(id string) (models.ViewExtendedLogData, error) {
+	search := opensearchapi.GetRequest{
+		Index:      "cranberry",
+		DocumentID: id,
+	}
+
+	searchResponse, err := search.Do(context.Background(), osc.client)
+	if err != nil {
+		return models.ViewExtendedLogData{}, err
+	}
+
+	logResp := GetResponse[models.ViewExtendedLogData]{}
+	err = logResp.FromJSON(searchResponse.Body)
+
+	if err != nil {
+		return models.ViewExtendedLogData{}, err
+	}
+
+	return logResp.Source, nil
 }

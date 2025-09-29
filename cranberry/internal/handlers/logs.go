@@ -129,6 +129,22 @@ func (lh *LogsHandler) ViewAllLogs(rw http.ResponseWriter, r *http.Request) {
 	logs.ToJSON(rw)
 }
 
+func (lh *LogsHandler) ViewLog(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	logId := vars["id"]
+
+	log, err := lh.osConn.GetLog(logId)
+	if err != nil {
+		lh.logger.Error("Failed to get log from OpenSearch database", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		cApiErr := models.CranberryAPIError{Detail: "Failed to get log"}
+		cApiErr.ToJSON(rw)
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	log.ToJSON(rw)
+}
+
 func (lh *LogsHandler) ViewAgentLogs(rw http.ResponseWriter, r *http.Request) {
 	//Get the agent uuid from the URL
 	vars := mux.Vars(r)
