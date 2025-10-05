@@ -78,6 +78,7 @@ func (server *CranberryServer) Init() error {
 	healthcheckHandler := handlers.NewHealthcheckHandler(server.logger, server.configuration)
 	agentsHandler := handlers.NewAgentsHandler(server.logger, server.configuration, server.sqlDb, server.osConn)
 	logsHandler := handlers.NewLogsHandler(server.logger, server.configuration, server.sqlDb, server.osConn)
+	streamsHandler := handlers.NewStreamsHandler(server.logger, server.configuration, server.sqlDb, server.osConn)
 
 	//Create the healthcheck route
 	r.HandleFunc("/api/v1/healthcheck", healthcheckHandler.Healthcheck)
@@ -100,6 +101,9 @@ func (server *CranberryServer) Init() error {
 
 	//Create the route that will retrieve a log by id
 	apiGetSubrouter.HandleFunc("/logs/{id}", logsHandler.ViewLog)
+
+	//Create the route to get all the logs from a stream based on stream UUID
+	apiGetSubrouter.HandleFunc("/streams/{uuid:[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+}/logs", streamsHandler.GetStreamLogs)
 
 	//Create the route that will receive logs from an agent
 	apiPostSubrouter.HandleFunc("/agents/{uuid:[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+-[0-9a-f]+}/logs", logsHandler.InsertAgentLog)

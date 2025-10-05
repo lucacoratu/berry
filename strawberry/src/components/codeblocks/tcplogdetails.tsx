@@ -14,39 +14,20 @@ import {
 import FindingBadge from "../findings/finding-badge";
 
 
-interface LogDetailsCodeblockProps {
+interface TCPLogDetailsCodeblockProps {
     language: string,
     filename: string,
     code: string
-    highlightedLines?: number[]
     findings?: FindingData[]
+    streamIndex?: number
 }
 
-export default function LogDetailsCodeblock(props: LogDetailsCodeblockProps) {
-    const lineHighlightText = ' // [!code highlight]';
-
+export default function TCPLogDetailsCodeblock(props: TCPLogDetailsCodeblockProps) {
     let codeData = Array({
         language: props.language,
         filename: props.filename,
         code: props.code,
     });
-
-    if (props.highlightedLines) {
-        const splitCode = props.code.split('\n');
-
-        let newCode = '';
-
-        for (let i = 0; i < splitCode.length; i++) {
-            let line = splitCode[i];
-            if (props.highlightedLines.includes(i))
-                line += lineHighlightText;
-            newCode += line + "\n";
-        }
-
-        codeData[0].code = newCode;
-    }
-
-
 
     return (
         <CodeBlock data={codeData} defaultValue={props.language}>
@@ -67,6 +48,10 @@ export default function LogDetailsCodeblock(props: LogDetailsCodeblockProps) {
                         })
                     }
                 </div>
+                {
+                    props.streamIndex && 
+                    <p className="text-sm font-bold">{props.streamIndex}</p>
+                }
                 <CodeBlockCopyButton
                     onCopy={() => console.log("Copied code to clipboard")}
                     onError={() => console.error("Failed to copy code to clipboard")}

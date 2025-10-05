@@ -229,6 +229,55 @@ func (osc *OpensearchConnection) GetLogs(logType string) (models.ViewExtendedLog
 	return logs, nil
 }
 
+// Get all the logs from a stream based on the stream UUID
+func (osc *OpensearchConnection) GetStreamLogs(streamUUID string) (models.ViewExtendedLogsData, error) {
+	//Prepare the query
+	content := strings.NewReader(
+		fmt.Sprintf(`{
+			"size": 1000,
+			"query": {
+				"term": {
+					"streamUUID.keyword": "%s"
+				}
+			},
+			"sort": [
+				{
+					"streamIndex": {
+						"order": "asc"
+					}
+				}
+			]
+		}`, streamUUID),
+	)
+
+	search := opensearchapi.SearchRequest{
+		Index: []string{"cranberry"},
+		Body:  content,
+	}
+
+	searchResponse, err := search.Do(context.Background(), osc.client)
+	if err != nil {
+		return []models.ViewExtendedLogData{}, err
+	}
+	defer searchResponse.Body.Close()
+
+	logsResp := SearchResponse[models.ViewExtendedLogData]{}
+	err = logsResp.FromJSON(searchResponse.Body)
+
+	if err != nil {
+		return []models.ViewExtendedLogData{}, err
+	}
+
+	logs := []models.ViewExtendedLogData{}
+	for _, hit := range logsResp.Hits.Hits {
+		log := models.ViewExtendedLogData{ExtendedLogData: hit.Source.ExtendedLogData}
+		log.Id = hit.Id
+		logs = append(logs, log)
+	}
+
+	return logs, nil
+}
+
 func (osc *OpensearchConnection) GetAgentLogs(uuid string) (models.ViewExtendedLogData, error) {
 	//Prepare the query
 	content := strings.NewReader(fmt.Sprintf(`{
