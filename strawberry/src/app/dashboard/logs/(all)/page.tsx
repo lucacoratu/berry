@@ -2,9 +2,10 @@ import { DataTable } from "@/components/table/data-table";
 import { constants } from "@/lib/constants"
 import { columns } from "./columns";
 import ChartRadarDefault, { MethodsStatsChartEntry } from "@/components/charts/methods-chart";
+import { columnsTcp } from "./columns_tcp";
 
-async function GetLogs(): Promise<ViewExtendedLogData[]> {
-    const URL: string = `${constants.apiBaseURL}/logs`;
+async function GetHTTPLogs(): Promise<ViewExtendedLogData[]> {
+    const URL: string = `${constants.apiBaseURL}/logs/http`;
     const response: Response = await fetch(URL);
     const logs: ViewExtendedLogData[] = await response.json();
     return logs;
@@ -17,8 +18,17 @@ async function GetMethodsStatistics(): Promise<HTTPMethodStatistics> {
     return stats;
 }
 
+async function GetTCPLogs(): Promise<ViewExtendedLogData[]> {
+    const URL: string = `${constants.apiBaseURL}/logs/tcp`;
+    const response: Response = await fetch(URL);
+    const logs: ViewExtendedLogData[] = await response.json();
+    return logs;
+}
+
+
 export default async function LogsPage() {
-    const logs: ViewExtendedLogData[] = await GetLogs();
+    const httpLogs: ViewExtendedLogData[] = await GetHTTPLogs();
+    const tcpLogs: ViewExtendedLogData[] = await GetTCPLogs();
     const stats: HTTPMethodStatistics = await GetMethodsStatistics();
 
     const chartData: MethodsStatsChartEntry[] = [
@@ -31,7 +41,7 @@ export default async function LogsPage() {
         {method: "POST", requests: stats.POST},
         {method: "PATCH", requests: stats.PATCH},
         {method: "CONNECT", requests: stats.CONNECT},
-    ]
+    ];
 
     return (
         <>
@@ -48,7 +58,11 @@ export default async function LogsPage() {
             </div>
 
             <div>
-                <DataTable columns={columns} title="HTTP Logs" data={logs} defaultColumn="httpMethod"/>
+                <DataTable columns={columns} title="HTTP Logs" data={httpLogs} defaultColumn="httpMethod"/>
+            </div>
+
+            <div>
+                <DataTable columns={columnsTcp} title="TCP Logs" data={tcpLogs} defaultColumn="direction"/>
             </div>
         </>
     )

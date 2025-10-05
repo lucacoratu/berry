@@ -16,6 +16,9 @@ type LogData struct {
 	RequestFindings  []*FindingData `json:"requestFindings"`  //The list of findings on the request
 	ResponseFindings []*FindingData `json:"responseFindings"` //The list of findings on the response
 	Verdict          string         `json:"verdict"`          //The action which was taken (drop/allow)
+	Direction        string         `json:"direction"`        //The direction of the data (ingress or egress)
+	StreamUUID       string         `json:"streamUUID"`       //The UUID of the stream
+	StreamIndex      int64          `json:"streamIndex"`      //The index of the stream (used by the websocket,tcp and udp proxies)
 }
 
 // Convert json data to LogData structure

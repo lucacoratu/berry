@@ -92,7 +92,8 @@ func (server *CranberryServer) Init() error {
 	apiGetSubrouter.HandleFunc("/agents", agentsHandler.ViewAgents)
 
 	//Create the route that will retrieve logs from all agents
-	apiGetSubrouter.HandleFunc("/logs", logsHandler.ViewAllLogs)
+	apiGetSubrouter.HandleFunc("/logs/http", logsHandler.ViewAllHTTPLogs)
+	apiGetSubrouter.HandleFunc("/logs/tcp", logsHandler.ViewAllTCPLogs)
 
 	//Create the route that will retrieve the methods count for HTTP logs
 	apiGetSubrouter.HandleFunc("/logs/methods-stats", logsHandler.ViewMethodsCount)

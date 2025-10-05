@@ -9,6 +9,9 @@ type ViewExtendedLogData = {
     requestFindings: FindingData[],
     responseFindings: FindingData[],
     verdict: string
+    direction: string,
+    streamUUID: string,
+    streamIndex: number,
 
     //Fields for HTTP type of log (this can be empty)
     httpMethod: string,

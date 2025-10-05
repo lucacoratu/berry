@@ -116,10 +116,25 @@ func (lh *LogsHandler) InsertAgentLog(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (lh *LogsHandler) ViewAllLogs(rw http.ResponseWriter, r *http.Request) {
-	logs, err := lh.osConn.GetLogs()
+// View all the logs with type == http
+func (lh *LogsHandler) ViewAllHTTPLogs(rw http.ResponseWriter, r *http.Request) {
+	logs, err := lh.osConn.GetLogs("http")
 	if err != nil {
-		lh.logger.Error("Failed to get logs from OpenSearch database", err.Error())
+		lh.logger.Error("Failed to get HTTP logs from OpenSearch database", err.Error())
+		rw.WriteHeader(http.StatusInternalServerError)
+		cApiErr := models.CranberryAPIError{Detail: "Failed to get logs"}
+		cApiErr.ToJSON(rw)
+	}
+
+	rw.WriteHeader(http.StatusOK)
+	logs.ToJSON(rw)
+}
+
+// View all the logs with type == tcp
+func (lh *LogsHandler) ViewAllTCPLogs(rw http.ResponseWriter, r *http.Request) {
+	logs, err := lh.osConn.GetLogs("tcp")
+	if err != nil {
+		lh.logger.Error("Failed to get TCP logs from OpenSearch database", err.Error())
 		rw.WriteHeader(http.StatusInternalServerError)
 		cApiErr := models.CranberryAPIError{Detail: "Failed to get logs"}
 		cApiErr.ToJSON(rw)

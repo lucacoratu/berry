@@ -181,21 +181,25 @@ func (osc *OpensearchConnection) InsertAgentLog(log models.ExtendedLogData) erro
 	return nil
 }
 
-func (osc *OpensearchConnection) GetLogs() (models.ViewExtendedLogsData, error) {
+func (osc *OpensearchConnection) GetLogs(logType string) (models.ViewExtendedLogsData, error) {
 	//Prepare the query
-	content := strings.NewReader(`{
-		"size": 1000,
-		"query": {
-			"match_all": {}
-		},
-		"sort": [
-			{
-				"timestamp": {
-					"order": "desc"
+	content := strings.NewReader(
+		fmt.Sprintf(`{
+			"size": 1000,
+			"query": {
+				"term": {
+					"type": "%s"
 				}
-			}
-		]
-	}`)
+			},
+			"sort": [
+				{
+					"timestamp": {
+						"order": "desc"
+					}
+				}
+			]
+		}`, logType),
+	)
 
 	search := opensearchapi.SearchRequest{
 		Index: []string{"cranberry"},

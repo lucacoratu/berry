@@ -298,3 +298,8 @@ func ConvertRequestAndResponseToB64(req *http.Request, resp *http.Response) (str
 	//Return the base64 string of the request and the response
 	return b64RawRequest, b64RawResponse, nil
 }
+
+// Convert byte array to base64 string
+func ConvertBytesToBase64(data []byte) string {
+	return b64.StdEncoding.EncodeToString(data)
+}

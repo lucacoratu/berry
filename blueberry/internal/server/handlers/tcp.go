@@ -2,13 +2,19 @@ package handlers
 
 import (
 	"blueberry/internal/config"
+	"blueberry/internal/cranberry"
 	code "blueberry/internal/detection/code"
 	rules "blueberry/internal/detection/rules"
 	"blueberry/internal/logging"
+	"blueberry/internal/models"
+	"blueberry/internal/utils"
 	"blueberry/internal/websocket"
 	"net"
 	"net/url"
 	"sync"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 // Buffer size for the TCP connections
@@ -28,6 +34,15 @@ type BlueberryTCPHandler struct {
 	//TODO add global mutex for api websocket connection
 	targetTcpServer net.Conn
 	targetTcpMutex  sync.Mutex
+}
+
+// Structure which holds information about the client connection
+type ClientConnection struct {
+	clientSocket            net.Conn   //The socket to interact with the client
+	clientSocketMutex       sync.Mutex //The mutex for the client connection socket
+	streamUUID              string     //The UUID of the stream so that the client connection can be identified from logs
+	currentStreamIndex      int64      //The current index to be used by request/response traffic
+	currentStreamIndexMutex sync.Mutex //The mutex for the current stream index (prevent race conditions)
 }
 
 func NewBlueberryTCPHandler(logger logging.ILogger, apiBaseURL string, configuration config.Configuration, forwardServerURL string, checkers []code.IValidator, rules []rules.Rule, apiWsConn *websocket.APIWebSocketConnection) *BlueberryTCPHandler {
@@ -76,7 +91,7 @@ func (bth *BlueberryTCPHandler) ConnectToTargetServer() error {
 // This function will proxy the traffic from client to target server
 // @param clientConn - the connection from the client
 // @param errc - the channel where any error will be sent so that the connection wil be closed
-func (bth *BlueberryTCPHandler) ProxyRequests(clientConn net.Conn, errc chan error) {
+func (bth *BlueberryTCPHandler) ProxyRequests(clientConn *ClientConnection, errc chan error) {
 	//Create the buffer
 	buf := make([]byte, DefaultBufferSize)
 
@@ -88,17 +103,17 @@ func (bth *BlueberryTCPHandler) ProxyRequests(clientConn net.Conn, errc chan err
 	//Infinite loop
 	for {
 		//Read from the client connection max DefaultBufferSize bytes
-		readBytes, err := clientConn.Read(buf)
+		readBytes, err := clientConn.clientSocket.Read(buf)
 		if err != nil {
 			//Log the error
-			bth.logger.Error("Failed to read message from client", clientConn.RemoteAddr().String(), err.Error())
+			bth.logger.Error("Failed to read message from client", clientConn.clientSocket.RemoteAddr().String(), err.Error())
 			errc <- err
 			return
 		}
 
 		//Make the buffer the correct size
 		buf = buf[:readBytes]
-		bth.logger.Debug("Received tcp message from", clientConn.RemoteAddr().String(), "content", string(buf))
+		bth.logger.Debug("Received tcp message from", clientConn.clientSocket.RemoteAddr().String(), "content", string(buf))
 
 		//Apply the tcp request rules
 		findings, err := ruleRunner.ApplyRulesOnTCPMessage("ingress", buf)
@@ -111,18 +126,53 @@ func (bth *BlueberryTCPHandler) ProxyRequests(clientConn net.Conn, errc chan err
 		verdict := rules.GetVerdictBasedOnFindings(bth.rules, bth.configuration.RuleConfig.DefaultAction, findings)
 		if verdict == "drop" {
 			//Send the drop message for tcp connection
-			_, err := clientConn.Write([]byte(bth.configuration.RuleConfig.ForbiddenTCPMessage))
+			_, err := clientConn.clientSocket.Write([]byte(bth.configuration.RuleConfig.ForbiddenTCPMessage))
 			if err != nil {
-				bth.logger.Error("Failed to send forbidden message to", clientConn.RemoteAddr().String(), err.Error())
+				bth.logger.Error("Failed to send forbidden message to", clientConn.clientSocket.RemoteAddr().String(), err.Error())
 			}
-			//Continue to next read (protect target server)
+		}
+
+		//Send the ingress log to server and increment the stream index
+		//Initialize the log data
+		remoteIp, _, _ := net.SplitHostPort(clientConn.clientSocket.RemoteAddr().String())
+		logData := models.LogData{
+			AgentId:         bth.configuration.UUID,
+			RemoteIP:        remoteIp,
+			Timestamp:       time.Now().Unix(),
+			StreamUUID:      clientConn.streamUUID,
+			RequestFindings: findings,
+			Verdict:         verdict,
+			Type:            "tcp",
+			Direction:       "ingress",
+		}
+
+		//Convert the buf with ingress data to base64 and add to log data Request field
+		logData.Request = utils.ConvertBytesToBase64(buf)
+
+		//Lock the stream mutex
+		clientConn.currentStreamIndexMutex.Lock()
+		//Use the current stream index
+		logData.StreamIndex = clientConn.currentStreamIndex
+		//Increment the stream index
+		clientConn.currentStreamIndex += 1
+		//Unlock the stream mutex
+		clientConn.currentStreamIndexMutex.Unlock()
+
+		cClient := cranberry.NewCranberryClient(bth.logger, bth.configuration)
+		_, err = cClient.SendLog(logData)
+		if err != nil {
+			bth.logger.Error("Failed to send log data to cranberry", err.Error())
+		}
+
+		//If verdict is drop then continue to next request
+		if verdict == "drop" {
 			continue
 		}
 
 		//Write the buffer to the target server
 		_, err = bth.targetTcpServer.Write(buf)
 		if err != nil {
-			bth.logger.Error("Failed to write message to target server", clientConn.RemoteAddr().String(), err.Error())
+			bth.logger.Error("Failed to write message to target server", clientConn.clientSocket.RemoteAddr().String(), err.Error())
 			errc <- err
 			return
 		}
@@ -134,7 +184,7 @@ func (bth *BlueberryTCPHandler) ProxyRequests(clientConn net.Conn, errc chan err
 // This connection will proxy the traffic from target server back to the client
 // @param clientConn - the connection from the client
 // @param errc - the channel for errors
-func (bth *BlueberryTCPHandler) ProxyResponses(clientConn net.Conn, errc chan error) {
+func (bth *BlueberryTCPHandler) ProxyResponses(clientConn *ClientConnection, errc chan error) {
 	//Create the buffer
 	buf := make([]byte, DefaultBufferSize)
 
@@ -169,18 +219,53 @@ func (bth *BlueberryTCPHandler) ProxyResponses(clientConn net.Conn, errc chan er
 		verdict := rules.GetVerdictBasedOnFindings(bth.rules, bth.configuration.RuleConfig.DefaultAction, findings)
 		if verdict == "drop" {
 			//Send the drop message for tcp connection
-			_, err := clientConn.Write([]byte(bth.configuration.RuleConfig.ForbiddenTCPMessage))
+			_, err := clientConn.clientSocket.Write([]byte(bth.configuration.RuleConfig.ForbiddenTCPMessage))
 			if err != nil {
-				bth.logger.Error("Failed to send forbidden message to", clientConn.RemoteAddr().String(), err.Error())
+				bth.logger.Error("Failed to send forbidden message to", clientConn.clientSocket.RemoteAddr().String(), err.Error())
 			}
-			//Continue to next read (the message has been sent to client)
+		}
+
+		//Send the egress log to server and increment the stream index
+		//Initialize the log data
+		remoteIp, _, _ := net.SplitHostPort(clientConn.clientSocket.RemoteAddr().String())
+		logData := models.LogData{
+			AgentId:          bth.configuration.UUID,
+			RemoteIP:         remoteIp,
+			Timestamp:        time.Now().Unix(),
+			StreamUUID:       clientConn.streamUUID,
+			ResponseFindings: findings,
+			Verdict:          verdict,
+			Type:             "tcp",
+			Direction:        "egress",
+		}
+
+		//Convert the buf with ingress data to base64 and add to log data Request field
+		logData.Response = utils.ConvertBytesToBase64(buf)
+
+		//Lock the stream mutex
+		clientConn.currentStreamIndexMutex.Lock()
+		//Use the current stream index
+		logData.StreamIndex = clientConn.currentStreamIndex
+		//Increment the stream index
+		clientConn.currentStreamIndex += 1
+		//Unlock the stream mutex
+		clientConn.currentStreamIndexMutex.Unlock()
+
+		cClient := cranberry.NewCranberryClient(bth.logger, bth.configuration)
+		_, err = cClient.SendLog(logData)
+		if err != nil {
+			bth.logger.Error("Failed to send log data to cranberry", err.Error())
+		}
+
+		//If the verdict is drop then continue to next response
+		if verdict == "drop" {
 			continue
 		}
 
 		//Write the buffer to the target server
-		_, err = clientConn.Write(buf)
+		_, err = clientConn.clientSocket.Write(buf)
 		if err != nil {
-			bth.logger.Error("Failed to write message to from target server to client", clientConn.RemoteAddr().String(), err.Error())
+			bth.logger.Error("Failed to write message to from target server to client", clientConn.clientSocket.RemoteAddr().String(), err.Error())
 			errc <- err
 			return
 		}
@@ -210,11 +295,15 @@ func (bth *BlueberryTCPHandler) HandleTCPConnection(conn net.Conn) {
 	//This will receive error from either the client or the target server and the connection will be closed
 	errc := make(chan error, 2)
 
+	//Create the structure for the client connection
+	//Generate a new UUID
+	clientConn := ClientConnection{clientSocket: conn, streamUUID: uuid.New().String(), currentStreamIndex: 0}
+
 	//Proxy the traffic from the conn in the function parameters and the target connection
 	//Proxy the requests
-	go bth.ProxyRequests(conn, errc)
+	go bth.ProxyRequests(&clientConn, errc)
 	//Proxy the responses
-	go bth.ProxyResponses(conn, errc)
+	go bth.ProxyResponses(&clientConn, errc)
 
 	//Wait for errors
 	<-errc

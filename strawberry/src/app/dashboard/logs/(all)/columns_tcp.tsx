@@ -19,7 +19,7 @@ import Link from "next/link";
 import FindingBadge from "@/components/findings/finding-badge";
 
 
-export const columns: ColumnDef<ViewExtendedLogData>[] = [
+export const columnsTcp: ColumnDef<ViewExtendedLogData>[] = [
     {
         id: "select",
         header: ({ table }) => (
@@ -56,46 +56,32 @@ export const columns: ColumnDef<ViewExtendedLogData>[] = [
         }
     },
     {
-        accessorKey: "httpMethod",
+        accessorKey: "streamUUID",
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Method" />
-        ),
-    },
-    {
-        accessorKey: "httpRequestURL",
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="URL" />
+            <DataTableColumnHeader column={column} title="Stream UUID" />
         ),
         cell: ({ row }) => {
             return (
-                <div className="truncate text-nowrap w-full max-w-[400px]">
-                    {row.getValue('httpRequestURL')}
-                </div>
+                <p>{row.getValue('streamUUID')}</p>
             )
         }
     },
     {
-        accessorKey: "httpResponseCode",
+        accessorKey: "streamIndex",
         header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Response" />
-        ),
-    },
-    {
-        accessorKey: "timestamp",
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Timestamp" />
+            <DataTableColumnHeader column={column} title="Stream Index" />
         ),
         cell: ({ row }) => {
-            const logDate = new Date(Number(row.getValue('timestamp')) * 1000);
-            const date: string = logDate.toLocaleString('ro-RO').split(", ")[0];
-            const time: string = logDate.toLocaleString('ro-RO').split(", ")[1];
             return (
-                <div className="flex flex-col gap-1">
-                    <p className="text-wrap text-center">{date}</p>
-                    <p className="text-wrap text-center">{time}</p>
-                </div>
-            );
+                <p>{row.getValue('streamIndex')}</p>
+            )
         }
+    },
+    {
+        accessorKey: "direction",
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Direction" />
+        ),
     },
     {
         accessorKey: "requestFindings",
@@ -136,8 +122,16 @@ export const columns: ColumnDef<ViewExtendedLogData>[] = [
             //console.log(log);
             if (log.responseFindings != null) {
                 return (
-                    <div className="overflow-hidden flex flex-row gap-2 max-w-36 max-h-8">
-                        response findings
+                    <div className="overflow-hidden justify-center flex flex-row gap-2 max-h-8">
+                        {
+                            log.responseFindings.map((finding: FindingData, index: number) => {
+                                if (index < 3) {
+                                    return (
+                                        <FindingBadge key={index} finding={finding} />
+                                    );
+                                }
+                            })
+                        }
                     </div>
                 );
             } else {
@@ -146,6 +140,23 @@ export const columns: ColumnDef<ViewExtendedLogData>[] = [
                     </>
                 );
             }
+        }
+    },
+    {
+        accessorKey: "timestamp",
+        header: ({ column }) => (
+            <DataTableColumnHeader column={column} title="Timestamp" />
+        ),
+        cell: ({ row }) => {
+            const logDate = new Date(Number(row.getValue('timestamp')) * 1000);
+            const date: string = logDate.toLocaleString('ro-RO').split(", ")[0];
+            const time: string = logDate.toLocaleString('ro-RO').split(", ")[1];
+            return (
+                <div className="flex flex-col gap-1">
+                    <p className="text-wrap text-center">{date}</p>
+                    <p className="text-wrap text-center">{time}</p>
+                </div>
+            );
         }
     },
     {
